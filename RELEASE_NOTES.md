@@ -1,6 +1,5 @@
-Keyboard 0.4.0
+Keyboard 0.4.1
 
-Added: private offline voice input. Tap the mic, speak, tap to stop. The text appears in a strip above the keys; check it, fix it with the keys if needed, then tap the check to insert or the X to discard. Nothing is typed until you confirm.
-Runs fully on the phone with whisper.cpp (MIT). Audio is kept in memory only and wiped. No internet permission.
-New microphone permission (used only while you listen). Set up: Settings, Typing, Voice: Allow microphone, then Load voice model (ggml-base.en.bin).
-Changed: the review strip replaces the toolbar instead of covering the keys, and follows your key transparency.
+Faster voice: the model now loads while you speak, short clips use a smaller listening window, and the engine is built for modern phone CPUs (2018 or newer). Target: about 3 seconds or less after you stop.
+The mic message strip now opens Settings directly on the Typing tab.
+Still private: audio stays in memory and is wiped. The model is removed from memory after each use. No internet permission.

@@ -23,7 +23,38 @@ final class Voice {
 
     private Voice() {}
 
-    private static native byte[] run(String model, float[] samples, int threads);
+    private static native long load(String model);
+    private static native void free(long ctx);
+    private static native byte[] run(long ctx, float[] samples, int threads);
+
+    private static long ctx;
+    private static Thread loader;
+
+    /** Loads the model in the background while you speak, so it is ready when you stop. */
+    static synchronized void preload(final String model) {
+        if (!lib || ctx != 0 || (loader != null && loader.isAlive())) return;
+        loader = new Thread(new Runnable() {
+            @Override public void run() {
+                long h = load(model);
+                synchronized (Voice.class) { ctx = h; }
+            }
+        });
+        loader.start();
+    }
+
+    private static void waitLoader() {
+        Thread t;
+        synchronized (Voice.class) { t = loader; }
+        try { if (t != null) t.join(); } catch (InterruptedException x) { /* ignore */ }
+    }
+
+    /** Frees the model from memory. */
+    static void release() {
+        waitLoader();
+        long h;
+        synchronized (Voice.class) { h = ctx; ctx = 0; loader = null; }
+        if (h != 0) free(h);
+    }
 
     private static AudioRecord rec;
     private static Thread th;
@@ -107,6 +138,7 @@ final class Voice {
     static void cancel() {
         float[] f = stop();
         Arrays.fill(f, 0f);
+        new Thread(new Runnable() { @Override public void run() { release(); } }).start();
     }
 
     /** Returns the text, "" if nothing was heard, or null if the model failed. Wipes the samples. */
@@ -115,12 +147,22 @@ final class Voice {
             if (!lib) return null;
             if (samples.length < RATE / 3) return "";
             int threads = Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors()));
-            byte[] out = run(model, samples, threads);
+            waitLoader();
+            long h;
+            synchronized (Voice.class) { h = ctx; }
+            if (h == 0) {
+                h = load(model);
+                synchronized (Voice.class) { ctx = h; }
+            }
+            if (h == 0) return null;
+            byte[] out = run(h, samples, threads);
+            release();
             if (out == null) return null;
             String t = new String(out, StandardCharsets.UTF_8).replaceAll("\\s+", " ").trim();
             if (t.matches("^[\\[(].*[\\])]$")) return "";
             return t;
         } catch (Throwable x) {
+            release();
             return null;
         } finally {
             Arrays.fill(samples, 0f);

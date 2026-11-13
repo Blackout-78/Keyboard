@@ -71,7 +71,7 @@ public class SettingsActivity extends Activity {
         }
         root.addView(tabBar, new LinearLayout.LayoutParams(MATCH, WRAP));
         setContentView(root);
-        selectTab(0);
+        selectTab(getIntent().getIntExtra("tab", 0));
     }
 
     private int dp(int v) {

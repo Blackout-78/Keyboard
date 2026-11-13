@@ -121,6 +121,7 @@ public class KeyboardView extends View {
             return;
         }
         if (!Voice.start()) { showMsg("Could not open the microphone", false); return; }
+        Voice.preload(Cfg.voiceFile(ctx).getAbsolutePath());
         voice = V_LISTEN;
         voiceText = "";
         invalidate();
@@ -215,6 +216,7 @@ public class KeyboardView extends View {
             clearVoice();
             if (open) {
                 Intent i = new Intent(getContext(), SettingsActivity.class);
+                i.putExtra("tab", 1);
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 getContext().startActivity(i);
             }

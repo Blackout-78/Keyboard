@@ -52,7 +52,10 @@ public class KeyboardService extends InputMethodService implements KeyboardView.
                     || action == EditorInfo.IME_ACTION_NONE
                     || action == EditorInfo.IME_ACTION_UNSPECIFIED;
             if (noAction) sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER);
-            else performEditorAction(action);
+            else {
+                InputConnection ic = getCurrentInputConnection();
+                if (ic != null) ic.performEditorAction(action);
+            }
         }
     }
 

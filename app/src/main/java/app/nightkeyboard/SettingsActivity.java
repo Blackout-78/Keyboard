@@ -67,6 +67,19 @@ public class SettingsActivity extends Activity {
             Cfg.bgFile(this).delete();
             toast("Background removed");
         });
+        button("Image fit: tap to change (stretch / crop / fit)", v -> {
+            int f = (Cfg.fit(this) + 1) % 3;
+            Cfg.p(this).edit().putInt("fit", f).apply();
+            toast(f == 0 ? "Stretch to fill" : (f == 1 ? "Crop to fill" : "Fit inside"));
+        });
+        text("Image tint", 13, MUTED);
+        LinearLayout tints = new LinearLayout(this);
+        tints.setOrientation(LinearLayout.HORIZONTAL);
+        addTint(tints, "None", 0);
+        addTint(tints, "Blue", 0xFF5C7CFA);
+        addTint(tints, "Violet", 0xFF8B5CF6);
+        addTint(tints, "Crimson", 0xFFE5384D);
+        col.addView(tints);
         slider("Image dimming", "dim", 255, Cfg.DEFAULT_DIM);
         slider("Key opacity", "keyAlpha", 255, Cfg.DEFAULT_KEY_ALPHA);
         text("Key color", 13, MUTED);
@@ -146,6 +159,21 @@ public class SettingsActivity extends Activity {
         bt.setOnClickListener(v -> {
             Cfg.p(this).edit().putInt("keyColor", color).apply();
             toast(name + " keys");
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.rightMargin = dp(4);
+        row.addView(bt, lp);
+    }
+
+    private void addTint(LinearLayout row, String name, final int color) {
+        Button bt = new Button(this);
+        bt.setText(name);
+        bt.setAllCaps(false);
+        bt.setTextColor(Color.WHITE);
+        bt.setBackgroundColor(color == 0 ? 0xFF1B1B24 : color);
+        bt.setOnClickListener(v -> {
+            Cfg.p(this).edit().putInt("tint", color).apply();
+            toast(name + " tint");
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.rightMargin = dp(4);

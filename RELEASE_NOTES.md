@@ -1,4 +1,6 @@
-Keyboard 0.1.0 - first build.
+Keyboard 0.1.1
 
-Added: typing keyboard (letters, numbers, symbols), Night theme, custom background image, key opacity and color, custom font, hint symbols with long-press, toolbar, Settings, version stamp.
-No internet permission. No data collected. No history kept.
+Fixed: background image now stretches to fill the whole keyboard (whole skull visible), as in your reference.
+Added: image fit choice (stretch / crop / fit), image tint colors, Skull theme now defaults to the blue tint.
+To get the new default look: Settings, Apply Skull theme.
+No internet permission. No data collected.

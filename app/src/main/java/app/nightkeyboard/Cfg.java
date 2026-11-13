@@ -28,6 +28,12 @@ final class Cfg {
 
     static int keyColor(Context c) { return p(c).getInt("keyColor", 0xFF000000); }
 
+    /** 0 = stretch to fill, 1 = crop to fill, 2 = fit inside. */
+    static int fit(Context c) { return p(c).getInt("fit", 0); }
+
+    /** Image tint color, 0 = none. */
+    static int tint(Context c) { return p(c).getInt("tint", 0); }
+
     static boolean hints(Context c) { return p(c).getBoolean("hints", true); }
 
     /** Built-in Skull theme: copies the bundled artwork into private storage and sets the look. */
@@ -41,6 +47,7 @@ final class Cfg {
             return false;
         }
         p(c).edit().putInt("keyColor", 0xFF000000).putInt("keyAlpha", 170).putInt("dim", 0)
+                .putInt("fit", 0).putInt("tint", 0xFF5C7CFA)
                 .putBoolean("themeInit", true).apply();
         return true;
     }

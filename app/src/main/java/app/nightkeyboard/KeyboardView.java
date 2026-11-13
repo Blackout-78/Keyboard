@@ -7,6 +7,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -56,6 +58,8 @@ public class KeyboardView extends View {
     private final Paint pHint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint pLine = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint pStamp = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint pBmp = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private int fit;
 
     private final List<List<Key>> rows = new ArrayList<>();
     private final RectF[] toolRects = new RectF[TOOLS.length];
@@ -129,6 +133,9 @@ public class KeyboardView extends View {
         keyColor = Cfg.keyColor(c);
         dim = Cfg.dim(c);
         hints = Cfg.hints(c);
+        fit = Cfg.fit(c);
+        int tint = Cfg.tint(c);
+        pBmp.setColorFilter(tint == 0 ? null : new PorterDuffColorFilter(tint, PorterDuff.Mode.MULTIPLY));
         Typeface tf = Typeface.DEFAULT;
         File ff = Cfg.fontFile(c);
         if (ff.exists()) {
@@ -239,19 +246,29 @@ public class KeyboardView extends View {
         int w = getWidth(), h = getHeight();
         c.drawColor(0xFF000000);
         if (bg != null) {
-            float br = (float) bg.getWidth() / bg.getHeight();
-            float vr = (float) w / h;
-            Rect src;
-            if (br > vr) {
-                int sw = (int) (bg.getHeight() * vr);
-                int sx = (bg.getWidth() - sw) / 2;
-                src = new Rect(sx, 0, sx + sw, bg.getHeight());
+            Rect full = new Rect(0, 0, bg.getWidth(), bg.getHeight());
+            if (fit == 0) {
+                c.drawBitmap(bg, full, new Rect(0, 0, w, h), pBmp);
+            } else if (fit == 2) {
+                float sc = Math.min((float) w / bg.getWidth(), (float) h / bg.getHeight());
+                int dw = (int) (bg.getWidth() * sc), dh = (int) (bg.getHeight() * sc);
+                int dx = (w - dw) / 2, dy = (h - dh) / 2;
+                c.drawBitmap(bg, full, new Rect(dx, dy, dx + dw, dy + dh), pBmp);
             } else {
-                int sh = (int) (bg.getWidth() / vr);
-                int sy = (bg.getHeight() - sh) / 2;
-                src = new Rect(0, sy, bg.getWidth(), sy + sh);
+                float br = (float) bg.getWidth() / bg.getHeight();
+                float vr = (float) w / h;
+                Rect src;
+                if (br > vr) {
+                    int sw = (int) (bg.getHeight() * vr);
+                    int sx = (bg.getWidth() - sw) / 2;
+                    src = new Rect(sx, 0, sx + sw, bg.getHeight());
+                } else {
+                    int sh = (int) (bg.getWidth() / vr);
+                    int sy = (bg.getHeight() - sh) / 2;
+                    src = new Rect(0, sy, bg.getWidth(), sy + sh);
+                }
+                c.drawBitmap(bg, src, new Rect(0, 0, w, h), pBmp);
             }
-            c.drawBitmap(bg, src, new Rect(0, 0, w, h), null);
             c.drawColor(Color.argb(dim, 0, 0, 0));
         }
         for (int i = 0; i < TOOLS.length; i++) drawTool(c, TOOLS[i], toolRects[i]);

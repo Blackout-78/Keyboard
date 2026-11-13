@@ -15,6 +15,9 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.util.SparseArray;
 import android.view.MotionEvent;
 import android.view.View;
@@ -32,7 +35,7 @@ public class KeyboardView extends View {
     }
 
     static final int DEL = -2, SHIFT = -1, SYM = -3, ENTER = -4, SPACE = -5, ABC = -6, EMOJI = -7, NONE = -9;
-    static final int T_INC_L = 1, T_SELECT = 2, T_COPY = 3, T_PASTE = 4, T_CUT = 5, T_UNDO = 6, T_SETTINGS = 7, T_INC_R = 8, T_REDO = 9;
+    static final int T_INC_L = 1, T_SELECT = 2, T_COPY = 3, T_PASTE = 4, T_CUT = 5, T_UNDO = 6, T_SETTINGS = 7, T_INC_R = 8, T_REDO = 9, T_MIC = 10;
 
     private static final class Key {
         final String label;
@@ -49,7 +52,7 @@ public class KeyboardView extends View {
         }
     }
 
-    private static final int[] TOOLS = {T_INC_L, T_SELECT, T_COPY, T_PASTE, T_CUT, T_UNDO, T_SETTINGS, T_INC_R};
+    private static final int[] TOOLS = {T_INC_L, T_SELECT, T_COPY, T_PASTE, T_CUT, T_UNDO, T_MIC, T_SETTINGS, T_INC_R};
 
     private Listener listener;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -80,6 +83,92 @@ public class KeyboardView extends View {
     private int shift; // 0 off, 1 once, 2 caps lock
     private long lastShiftTap;
     private boolean incognito = true;
+
+    private static final String TEST_TRANSCRIPT = "Test only: voice is not connected yet.";
+    private int voice; // 0 idle, 1 listening, 2 review
+    private String voiceText = "";
+    private final RectF vInsert = new RectF(), vEdit = new RectF(), vDiscard = new RectF();
+    private final TextPaint pVoice = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+
+    /** Wipes any voice state. Called whenever the keyboard opens or closes. */
+    public void clearVoice() {
+        voice = 0;
+        voiceText = "";
+        invalidate();
+    }
+
+    private void toggleMic() {
+        if (voice == 0) {
+            voice = 1;
+        } else if (voice == 1) {
+            voice = 2;
+            voiceText = TEST_TRANSCRIPT;
+        } else {
+            clearVoice();
+            return;
+        }
+        invalidate();
+    }
+
+    private void drawVoicePanel(Canvas c, int w, int h) {
+        float top = toolbarH() + dp * 3, bot = h - dp * 16, l = dp * 3, r = w - dp * 3;
+        RectF p = new RectF(l, top, r, bot);
+        pFill.setColor(keyColor);
+        pFill.setAlpha(Math.max(otherAlpha, 200));
+        c.drawRoundRect(p, dp * 8, dp * 8, pFill);
+        pLine.setColor(accent);
+        pLine.setAlpha(255);
+        c.drawRoundRect(p, dp * 8, dp * 8, pLine);
+        pVoice.setTypeface(pText.getTypeface());
+        pVoice.setColor(textColor);
+        pVoice.setTextSize(dp * 16);
+        pVoice.setTextAlign(Paint.Align.LEFT);
+        int tw = (int) (p.width() - dp * 24);
+        String msg = voice == 1 ? "Listening\u2026 tap the mic to stop" : voiceText;
+        StaticLayout sl = StaticLayout.Builder.obtain(msg, 0, msg.length(), pVoice, tw).setAlignment(Layout.Alignment.ALIGN_NORMAL).build();
+        c.save();
+        c.translate(p.left + dp * 12, p.top + dp * 12);
+        c.clipRect(0, 0, tw, p.height() - dp * 64);
+        sl.draw(c);
+        c.restore();
+        if (voice != 2) return;
+        float bh = dp * 40, by = p.bottom - bh - dp * 8, bw = (p.width() - dp * 32) / 3f;
+        vInsert.set(p.left + dp * 8, by, p.left + dp * 8 + bw, by + bh);
+        vEdit.set(vInsert.right + dp * 8, by, vInsert.right + dp * 8 + bw, by + bh);
+        vDiscard.set(vEdit.right + dp * 8, by, vEdit.right + dp * 8 + bw, by + bh);
+        drawVBtn(c, vInsert, "Insert", true);
+        drawVBtn(c, vEdit, "Edit in field", false);
+        drawVBtn(c, vDiscard, "Discard", false);
+    }
+
+    private void drawVBtn(Canvas c, RectF r, String label, boolean primary) {
+        if (primary) {
+            pFill.setColor(accent);
+            pFill.setAlpha(255);
+            c.drawRoundRect(r, dp * 8, dp * 8, pFill);
+        } else {
+            pLine.setColor(hintColor);
+            pLine.setAlpha(255);
+            c.drawRoundRect(r, dp * 8, dp * 8, pLine);
+        }
+        pVoice.setTextAlign(Paint.Align.CENTER);
+        pVoice.setTextSize(dp * 14);
+        pVoice.setColor(textColor);
+        c.drawText(label, r.centerX(), r.centerY() + dp * 5, pVoice);
+    }
+
+    private void voiceTouch(float x, float y) {
+        if (voice != 2) return;
+        if (vInsert.contains(x, y)) {
+            if (listener != null) listener.onText(voiceText);
+            clearVoice();
+        } else if (vEdit.contains(x, y)) {
+            if (listener != null) listener.onText(voiceText);
+            clearVoice();
+        } else if (vDiscard.contains(x, y)) {
+            clearVoice();
+        }
+    }
 
     private Bitmap bg;
     private int keyColor = 0xFF000000;
@@ -324,6 +413,11 @@ public class KeyboardView extends View {
         }
         for (int i = 0; i < TOOLS.length; i++) drawTool(c, TOOLS[i], toolRects[i]);
         float rad = dp * 8;
+        if (voice != 0) {
+            drawVoicePanel(c, w, h);
+            c.drawText(stamp, dp * 8, h - dp * 4, pStamp);
+            return;
+        }
         for (List<Key> row : rows) {
             for (Key k : row) {
                 boolean down = isPressed(k);
@@ -424,6 +518,22 @@ public class KeyboardView extends View {
             case T_INC_R:
                 drawIncognito(c, cx, cy, s, id == T_INC_L);
                 break;
+            case T_MIC:
+                if (voice != 0) {
+                    pFill.setColor(accent);
+                    pFill.setAlpha(255);
+                    c.drawCircle(cx, cy, s * 1.3f, pFill);
+                }
+                if (voice == 1) {
+                    pFill.setColor(textColor);
+                    c.drawRect(cx - s * 0.5f, cy - s * 0.5f, cx + s * 0.5f, cy + s * 0.5f, pFill);
+                } else {
+                    c.drawRoundRect(cx - s * 0.35f, cy - s, cx + s * 0.35f, cy + s * 0.2f, s * 0.35f, s * 0.35f, pLine);
+                    c.drawArc(new RectF(cx - s * 0.7f, cy - s * 0.5f, cx + s * 0.7f, cy + s * 0.5f), 0, 180, false, pLine);
+                    c.drawLine(cx, cy + s * 0.5f, cx, cy + s, pLine);
+                    c.drawLine(cx - s * 0.4f, cy + s, cx + s * 0.4f, cy + s, pLine);
+                }
+                break;
             case T_SELECT:
                 pLine.setPathEffect(new DashPathEffect(new float[]{dp * 3, dp * 3}, 0));
                 c.drawRect(cx - s, cy - s, cx + s, cy + s, pLine);
@@ -519,6 +629,10 @@ public class KeyboardView extends View {
             invalidate();
             return;
         }
+        if (voice != 0) {
+            voiceTouch(x, y);
+            return;
+        }
         Key hit = null;
         for (List<Key> row : rows) {
             for (Key k : row) {
@@ -552,6 +666,7 @@ public class KeyboardView extends View {
         if (tool != null) {
             pressedTools.remove(id);
             if (tool == T_INC_L || tool == T_INC_R) incognito = !incognito;
+            else if (tool == T_MIC) toggleMic();
             else if (tool == T_UNDO) {
                 handler.removeCallbacks(toolLongRun);
                 if (!toolLongFired && listener != null) listener.onAction(T_UNDO);

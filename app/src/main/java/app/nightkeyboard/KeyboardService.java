@@ -28,10 +28,17 @@ public class KeyboardService extends InputMethodService implements KeyboardView.
     public void onStartInputView(EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
         if (view == null) return;
+        view.clearVoice();
         view.reloadTheme();
         int cls = info.inputType & InputType.TYPE_MASK_CLASS;
         boolean symbolsFirst = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE;
         view.setSymbols(symbolsFirst);
+    }
+
+    @Override
+    public void onFinishInputView(boolean finishingInput) {
+        super.onFinishInputView(finishingInput);
+        if (view != null) view.clearVoice();
     }
 
     @Override

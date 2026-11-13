@@ -48,6 +48,12 @@ final class Cfg {
     /** Accent color: Enter key and Settings highlights. */
     static int accent(Context c) { return p(c).getInt("accent", DEFAULT_ACCENT); }
 
+    /** Color of letters, numbers and toolbar icons. */
+    static int textColor(Context c) { return p(c).getInt("textColor", 0xFFFFFFFF); }
+
+    /** Color of the small hint symbols. */
+    static int hintColor(Context c) { return p(c).getInt("hintColor", 0xFF9A9AB0); }
+
     static boolean hints(Context c) { return p(c).getBoolean("hints", true); }
 
     /** Built-in Skull theme: copies the bundled artwork into private storage and sets the look. */

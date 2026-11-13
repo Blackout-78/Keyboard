@@ -140,6 +140,8 @@ public class SettingsActivity extends Activity {
 
         c = card("COLORS");
         colorRow(c, "Accent color (Enter key, tabs, titles)", "accent", Cfg.DEFAULT_ACCENT);
+        colorRow(c, "Text color (letters, numbers, icons)", "textColor", 0xFFFFFFFF);
+        colorRow(c, "Hint symbol color", "hintColor", 0xFF9A9AB0);
 
         c = card("FONT");
         label(c, Cfg.fontFile(this).exists() ? "Custom font in use" : "Default font in use", 13, MUTED);

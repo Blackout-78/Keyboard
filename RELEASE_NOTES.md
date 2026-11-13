@@ -1,5 +1,4 @@
-Keyboard 0.2.0
+Keyboard 0.2.1
 
-New Settings: four tabs (Theme, Typing, Privacy, About) with a live preview of the real keyboard.
-Added: color wheel for the accent color (Enter key and Settings), key color, and image tint.
+Added: color wheel for text color (letters, numbers, toolbar icons) and for the hint symbol color. Live in the preview.
 No internet permission. No data collected.

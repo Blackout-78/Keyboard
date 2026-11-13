@@ -65,6 +65,8 @@ public class KeyboardView extends View {
     private boolean spaceSwipe = true;
     private int accent = Cfg.DEFAULT_ACCENT;
     private boolean previewMode;
+    private int textColor = 0xFFFFFFFF;
+    private int hintColor = 0xFF9A9AB0;
     private int spaceId = -1;
     private float spaceAnchorX;
     private boolean spaceDragged;
@@ -124,7 +126,7 @@ public class KeyboardView extends View {
         dp = c.getResources().getDisplayMetrics().density;
         pLine.setStyle(Paint.Style.STROKE);
         pLine.setStrokeWidth(dp * 1.6f);
-        pLine.setColor(Color.WHITE);
+        pLine.setColor(textColor);
         pLine.setStrokeCap(Paint.Cap.ROUND);
         pHint.setTextSize(dp * 11);
         pHint.setTextAlign(Paint.Align.RIGHT);
@@ -160,6 +162,10 @@ public class KeyboardView extends View {
         heightPct = Cfg.heightPct(c);
         spaceSwipe = Cfg.spaceSwipe(c);
         accent = Cfg.accent(c);
+        textColor = Cfg.textColor(c);
+        hintColor = Cfg.hintColor(c);
+        pText.setColor(textColor);
+        pHint.setColor(hintColor);
         int tint = Cfg.tint(c);
         pBmp.setColorFilter(tint == 0 ? null : new PorterDuffColorFilter(tint, PorterDuff.Mode.MULTIPLY));
     }
@@ -191,8 +197,6 @@ public class KeyboardView extends View {
         pText.setTypeface(tf);
         pHint.setTypeface(tf);
         pText.setTextAlign(Paint.Align.CENTER);
-        pText.setColor(Color.WHITE);
-        pHint.setColor(0xFF9A9AB0);
         if (bg != null) { bg.recycle(); bg = null; }
         File bf = Cfg.bgFile(c);
         if (bf.exists()) {
@@ -343,7 +347,7 @@ public class KeyboardView extends View {
     private void drawKeyFace(Canvas c, Key k) {
         float cx = k.r.centerX();
         float cy = k.r.centerY();
-        pLine.setColor(Color.WHITE);
+        pLine.setColor(textColor);
         if (k.code == SHIFT) {
             pText.setTextSize(dp * 20);
             drawCentered(c, shift == 2 ? "^^" : (shift == 1 ? "^." : "^"), cx, cy);
@@ -358,7 +362,7 @@ public class KeyboardView extends View {
             pText.setTextSize(dp * 14);
             pText.setColor(0xFF9A9AB0);
             drawCentered(c, "Space", cx, cy);
-            pText.setColor(Color.WHITE);
+            pText.setColor(textColor);
             return;
         }
         pText.setTextSize(k.code == 0 ? dp * 22 : dp * 15);
@@ -394,7 +398,7 @@ public class KeyboardView extends View {
         c.drawPath(p, pLine);
         c.drawLine(cx - dp * 9, cy + dp * 2, cx - dp * 3, cy - dp * 4, pLine);
         c.drawLine(cx - dp * 9, cy + dp * 2, cx - dp * 3, cy + dp * 8, pLine);
-        pLine.setColor(Color.WHITE);
+        pLine.setColor(textColor);
     }
 
     private void drawSmiley(Canvas c, float cx, float cy) {
@@ -408,9 +412,9 @@ public class KeyboardView extends View {
 
     private void drawTool(Canvas c, int id, RectF r) {
         float cx = r.centerX(), cy = r.centerY(), s = dp * 11;
-        pLine.setColor(Color.WHITE);
+        pLine.setColor(textColor);
         pLine.setPathEffect(null);
-        pFill.setColor(Color.WHITE);
+        pFill.setColor(textColor);
         pFill.setAlpha(255);
         boolean pressed = false;
         for (int i = 0; i < pressedTools.size(); i++) if (pressedTools.valueAt(i) == id) pressed = true;
@@ -460,7 +464,7 @@ public class KeyboardView extends View {
     }
 
     private void drawIncognito(Canvas c, float cx, float cy, float s, boolean left) {
-        pFill.setColor(Color.WHITE);
+        pFill.setColor(textColor);
         pFill.setAlpha(incognito ? 255 : 110);
         c.drawCircle(cx, cy, s * 1.25f, pFill);
         pLine.setColor(0xFF000000);
@@ -469,7 +473,7 @@ public class KeyboardView extends View {
         float d = left ? -1 : 1;
         c.drawLine(cx + d * s * 0.2f, cy + s * 0.5f, cx - d * s * 0.2f, cy + s * 0.75f, pLine);
         c.drawLine(cx + d * s * 0.2f, cy + s * 0.5f, cx - d * s * 0.2f, cy + s * 0.25f, pLine);
-        pLine.setColor(Color.WHITE);
+        pLine.setColor(textColor);
     }
 
     @Override

@@ -11,6 +11,7 @@ import java.io.OutputStream;
 final class Cfg {
     static final int DEFAULT_KEY_ALPHA = 200;
     static final int DEFAULT_DIM = 90;
+    static final int DEFAULT_ACCENT = 0xFF7C6CF0;
 
     private Cfg() {}
 
@@ -43,6 +44,9 @@ final class Cfg {
 
     /** Slide a finger along the Space bar to move the cursor. */
     static boolean spaceSwipe(Context c) { return p(c).getBoolean("spaceSwipe", true); }
+
+    /** Accent color: Enter key and Settings highlights. */
+    static int accent(Context c) { return p(c).getInt("accent", DEFAULT_ACCENT); }
 
     static boolean hints(Context c) { return p(c).getBoolean("hints", true); }
 

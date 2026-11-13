@@ -1,11 +1,14 @@
 package app.nightkeyboard;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -18,6 +21,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.File;
@@ -27,30 +31,131 @@ import java.io.OutputStream;
 
 public class SettingsActivity extends Activity {
     private static final int REQ_IMAGE = 1, REQ_FONT = 2;
-    private static final int BG = 0xFF0B0B10, ACCENT = 0xFFA99CFF, MUTED = 0xFF8B8BA3;
+    private static final int BG = 0xFF0B0B10, CARD = 0xFF13131A, BTN = 0xFF1B1B24, MUTED = 0xFF8B8BA3;
     private static final String RELEASES = "https://github.com/Blackout-78/Keyboard/releases";
+    private static final String[] TABS = {"Theme", "Typing", "Privacy", "About"};
+    private static final int MATCH = ViewGroup.LayoutParams.MATCH_PARENT;
+    private static final int WRAP = ViewGroup.LayoutParams.WRAP_CONTENT;
 
     private LinearLayout col;
+    private LinearLayout tabBar;
+    private int tab = 0;
+    private int accent;
+    private KeyboardView preview;
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        Cfg.firstRun(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(BG);
         ScrollView sv = new ScrollView(this);
-        sv.setBackgroundColor(BG);
         col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
-        int p = dp(16);
-        col.setPadding(p, p, p, p * 2);
-        sv.addView(col, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        setContentView(sv);
+        col.setPadding(dp(12), dp(12), dp(12), dp(24));
+        sv.addView(col, new ViewGroup.LayoutParams(MATCH, WRAP));
+        root.addView(sv, new LinearLayout.LayoutParams(MATCH, 0, 1f));
+        tabBar = new LinearLayout(this);
+        tabBar.setOrientation(LinearLayout.HORIZONTAL);
+        tabBar.setBackgroundColor(0xFF0F0F15);
+        for (int i = 0; i < TABS.length; i++) {
+            final int idx = i;
+            TextView t = new TextView(this);
+            t.setText(TABS[i]);
+            t.setTextSize(13);
+            t.setGravity(Gravity.CENTER);
+            t.setPadding(0, dp(16), 0, dp(16));
+            t.setOnClickListener(v -> selectTab(idx));
+            tabBar.addView(t, new LinearLayout.LayoutParams(0, WRAP, 1f));
+        }
+        root.addView(tabBar, new LinearLayout.LayoutParams(MATCH, WRAP));
+        setContentView(root);
+        selectTab(0);
+    }
 
-        text("Keyboard", 24, Color.WHITE);
-        text("Offline. Private. Nothing is collected or saved.", 13, MUTED);
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
+    }
 
-        Cfg.firstRun(this);
-        section("SET UP");
-        button("1. Enable keyboard", v -> startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
-        button("2. Switch to this keyboard", v -> {
+    private void selectTab(int i) {
+        tab = i;
+        accent = Cfg.accent(this);
+        preview = null;
+        col.removeAllViews();
+        TextView h = new TextView(this);
+        h.setText("Keyboard");
+        h.setTextSize(22);
+        h.setTextColor(Color.WHITE);
+        h.setPadding(dp(4), 0, 0, dp(4));
+        col.addView(h);
+        if (i == 0) buildTheme();
+        else if (i == 1) buildTyping();
+        else if (i == 2) buildPrivacy();
+        else buildAbout();
+        for (int k = 0; k < tabBar.getChildCount(); k++) {
+            ((TextView) tabBar.getChildAt(k)).setTextColor(k == i ? accent : MUTED);
+        }
+    }
+
+    private void buildTheme() {
+        preview = new KeyboardView(this);
+        preview.setPreview(true);
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(MATCH, WRAP);
+        plp.topMargin = dp(8);
+        col.addView(preview, plp);
+
+        LinearLayout c = card("BACKGROUND");
+        button(c, "Use built-in Skull theme", v -> {
+            toast(Cfg.applySkull(this) ? "Skull theme applied" : "Could not apply");
+            refreshPreview();
+        });
+        button(c, "Choose your own image", v -> pick("image/*", REQ_IMAGE));
+        button(c, "Remove background image", v -> {
+            Cfg.bgFile(this).delete();
+            refreshPreview();
+            toast("Background removed");
+        });
+        final Button fb = button(c, fitLabel(), null);
+        fb.setOnClickListener(v -> {
+            Cfg.p(this).edit().putInt("fit", (Cfg.fit(this) + 1) % 3).apply();
+            fb.setText(fitLabel());
+        });
+        label(c, "Tint", 13, MUTED);
+        LinearLayout tints = new LinearLayout(this);
+        tints.setOrientation(LinearLayout.HORIZONTAL);
+        chip(tints, "None", 0xFF1B1B24, () -> setTint(0));
+        chip(tints, "Blue", 0xFF5C7CFA, () -> setTint(0xFF5C7CFA));
+        chip(tints, "Violet", 0xFF8B5CF6, () -> setTint(0xFF8B5CF6));
+        chip(tints, "Crimson", 0xFFE5384D, () -> setTint(0xFFE5384D));
+        chip(tints, "Wheel", 0xFF2A2A38, () -> pickColor("Image tint", "tint", 0xFF5C7CFA));
+        c.addView(tints);
+        slider(c, "Image dimming", "dim", 255, Cfg.DEFAULT_DIM);
+
+        c = card("KEYS");
+        slider(c, "Letter keys: transparent to solid", "letterAlpha", 255, Cfg.DEFAULT_KEY_ALPHA);
+        slider(c, "Other keys: transparent to solid", "otherAlpha", 255, Cfg.DEFAULT_KEY_ALPHA);
+        rangeSlider(c, "Keyboard height (percent)", "heightPct", 60, 140, 100);
+        colorRow(c, "Key color", "keyColor", 0xFF000000);
+
+        c = card("COLORS");
+        colorRow(c, "Accent color (Enter key, tabs, titles)", "accent", Cfg.DEFAULT_ACCENT);
+
+        c = card("FONT");
+        label(c, Cfg.fontFile(this).exists() ? "Custom font in use" : "Default font in use", 13, MUTED);
+        button(c, "Choose font (.ttf)", v -> pick("*/*", REQ_FONT));
+        button(c, "Remove custom font", v -> {
+            Cfg.fontFile(this).delete();
+            refreshPreview();
+            toast("Font removed");
+            selectTab(tab);
+        });
+    }
+
+    private void buildTyping() {
+        LinearLayout c = card("SET UP");
+        button(c, "1. Enable keyboard", v -> startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
+        button(c, "2. Switch to this keyboard", v -> {
             InputMethodManager m = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             if (m != null) m.showInputMethodPicker();
         });
@@ -58,156 +163,133 @@ public class SettingsActivity extends Activity {
         test.setHint("Type here to test");
         test.setHintTextColor(MUTED);
         test.setTextColor(Color.WHITE);
-        col.addView(test);
+        c.addView(test);
 
-        section("THEME");
-        button("Apply Skull theme (built-in)", v -> toast(Cfg.applySkull(this) ? "Skull theme applied" : "Could not apply"));
-        rangeSlider("Keyboard height (percent)", "heightPct", 60, 140, 100);
-        button("Choose background image", v -> pick("image/*", REQ_IMAGE));
-        button("Remove background image", v -> {
-            Cfg.bgFile(this).delete();
-            toast("Background removed");
-        });
-        button("Image fit: tap to change (stretch / crop / fit)", v -> {
-            int f = (Cfg.fit(this) + 1) % 3;
-            Cfg.p(this).edit().putInt("fit", f).apply();
-            toast(f == 0 ? "Stretch to fill" : (f == 1 ? "Crop to fill" : "Fit inside"));
-        });
-        text("Image tint", 13, MUTED);
-        LinearLayout tints = new LinearLayout(this);
-        tints.setOrientation(LinearLayout.HORIZONTAL);
-        addTint(tints, "None", 0);
-        addTint(tints, "Blue", 0xFF5C7CFA);
-        addTint(tints, "Violet", 0xFF8B5CF6);
-        addTint(tints, "Crimson", 0xFFE5384D);
-        col.addView(tints);
-        slider("Image dimming", "dim", 255, Cfg.DEFAULT_DIM);
-        slider("Letter keys: transparent to solid", "letterAlpha", 255, Cfg.DEFAULT_KEY_ALPHA);
-        slider("Other keys (shift, delete, space, enter): transparent to solid", "otherAlpha", 255, Cfg.DEFAULT_KEY_ALPHA);
-        text("Key color", 13, MUTED);
-        LinearLayout colors = new LinearLayout(this);
-        colors.setOrientation(LinearLayout.HORIZONTAL);
-        addColor(colors, "Black", 0xFF000000);
-        addColor(colors, "Gray", 0xFF1B1B24);
-        addColor(colors, "Navy", 0xFF0D1B3A);
-        addColor(colors, "Crimson", 0xFF3A0D14);
-        col.addView(colors);
-        button("Choose font (.ttf)", v -> pick("*/*", REQ_FONT));
-        button("Remove custom font", v -> {
-            Cfg.fontFile(this).delete();
-            toast("Font removed");
-        });
-        button("Slide on Space bar to move cursor: toggle", v -> {
-            boolean on = !Cfg.spaceSwipe(this);
-            Cfg.p(this).edit().putBoolean("spaceSwipe", on).apply();
-            toast(on ? "Space-bar cursor on" : "Space-bar cursor off");
-        });
-        button("Hint symbols on keys: toggle", v -> {
-            boolean on = !Cfg.hints(this);
-            Cfg.p(this).edit().putBoolean("hints", on).apply();
-            toast(on ? "Hints on" : "Hints off");
-        });
+        c = card("TYPING");
+        toggle(c, "Slide on Space bar to move cursor", "spaceSwipe", true);
+        toggle(c, "Hint symbols on keys (hold a key to type its hint)", "hints", true);
+        label(c, "Suggestions and autocorrect: coming next.", 13, MUTED);
+    }
 
-        section("PRIVACY");
-        text("Internet access: none. The app has no network permission.", 14, Color.WHITE);
-        text("Backups and cloud sync: disabled for this app.", 14, Color.WHITE);
-        text("Typed text is never stored or logged.", 14, Color.WHITE);
+    private void buildPrivacy() {
+        LinearLayout c = card("PRIVACY");
+        label(c, "Internet access: none. The app has no network permission.", 14, Color.WHITE);
+        label(c, "Backups and cloud sync: disabled for this app.", 14, Color.WHITE);
+        label(c, "Typed text is never stored, logged, or sent anywhere.", 14, Color.WHITE);
+        label(c, "No clipboard history. Copy, cut, and paste use Android's own clipboard.", 14, Color.WHITE);
+        label(c, "Only your theme choices and background image are saved, in the app's private storage.", 14, Color.WHITE);
+    }
 
-        section("ABOUT");
-        text("Version " + BuildConfig.VERSION_NAME + " (build " + BuildConfig.VERSION_CODE + ")", 14, Color.WHITE);
-        Button rel = button("Open GitHub Releases", v -> {
+    private void buildAbout() {
+        LinearLayout c = card("ABOUT");
+        label(c, "Version " + BuildConfig.VERSION_NAME + " (build " + BuildConfig.VERSION_CODE + ")", 14, Color.WHITE);
+        label(c, "Offline. Private. Installed only through GitHub.", 13, MUTED);
+        Button rel = button(c, "Open GitHub Releases", v -> {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(RELEASES)));
             } catch (Exception e) {
                 toast("No browser found");
             }
         });
-        rel.setTextColor(ACCENT);
+        rel.setTextColor(accent);
     }
 
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
+    // ---- helpers ----
+
+    private String fitLabel() {
+        int f = Cfg.fit(this);
+        return "Image fit: " + (f == 0 ? "Stretch" : (f == 1 ? "Crop" : "Fit inside")) + " (tap to change)";
     }
 
-    private TextView text(String t, int sp, int color) {
+    private void setTint(int c) {
+        Cfg.p(this).edit().putInt("tint", c).apply();
+    }
+
+    private void refreshPreview() {
+        if (preview != null) preview.reloadTheme();
+    }
+
+    private LinearLayout card(String title) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(CARD);
+        g.setCornerRadius(dp(12));
+        c.setBackground(g);
+        c.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(MATCH, WRAP);
+        lp.topMargin = dp(10);
+        col.addView(c, lp);
+        if (title != null) label(c, title, 11, accent);
+        return c;
+    }
+
+    private TextView label(LinearLayout p, String t, int sp, int color) {
         TextView tv = new TextView(this);
         tv.setText(t);
         tv.setTextSize(sp);
         tv.setTextColor(color);
-        tv.setPadding(0, dp(6), 0, dp(6));
-        col.addView(tv);
+        tv.setPadding(0, dp(4), 0, dp(4));
+        p.addView(tv);
         return tv;
     }
 
-    private void section(String t) {
-        TextView tv = text(t, 12, ACCENT);
-        tv.setPadding(0, dp(22), 0, dp(4));
-    }
-
-    private Button button(String t, View.OnClickListener l) {
+    private Button button(LinearLayout p, String t, View.OnClickListener l) {
         Button bt = new Button(this);
         bt.setText(t);
         bt.setAllCaps(false);
         bt.setTextColor(Color.WHITE);
-        bt.setBackgroundColor(0xFF1B1B24);
-        bt.setOnClickListener(l);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(BTN);
+        g.setCornerRadius(dp(8));
+        bt.setBackground(g);
+        if (l != null) bt.setOnClickListener(l);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(MATCH, WRAP);
         lp.topMargin = dp(8);
-        col.addView(bt, lp);
+        p.addView(bt, lp);
         return bt;
     }
 
-    private void addColor(LinearLayout row, String name, final int color) {
+    private void chip(LinearLayout row, String name, int color, final Runnable action) {
         Button bt = new Button(this);
         bt.setText(name);
+        bt.setTextSize(11);
         bt.setAllCaps(false);
         bt.setTextColor(Color.WHITE);
-        bt.setBackgroundColor(color);
-        bt.setOnClickListener(v -> {
-            Cfg.p(this).edit().putInt("keyColor", color).apply();
-            toast(name + " keys");
-        });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        bt.setMinWidth(0);
+        bt.setMinimumWidth(0);
+        bt.setPadding(0, 0, 0, 0);
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(color);
+        g.setCornerRadius(dp(8));
+        bt.setBackground(g);
+        bt.setOnClickListener(v -> action.run());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, WRAP, 1f);
         lp.rightMargin = dp(4);
         row.addView(bt, lp);
     }
 
-    private void addTint(LinearLayout row, String name, final int color) {
-        Button bt = new Button(this);
-        bt.setText(name);
-        bt.setAllCaps(false);
-        bt.setTextColor(Color.WHITE);
-        bt.setBackgroundColor(color == 0 ? 0xFF1B1B24 : color);
-        bt.setOnClickListener(v -> {
-            Cfg.p(this).edit().putInt("tint", color).apply();
-            toast(name + " tint");
-        });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp.rightMargin = dp(4);
-        row.addView(bt, lp);
+    private void toggle(LinearLayout p, String t, final String key, boolean def) {
+        Switch sw = new Switch(this);
+        sw.setText(t);
+        sw.setTextColor(Color.WHITE);
+        sw.setChecked(Cfg.p(this).getBoolean(key, def));
+        sw.setPadding(0, dp(8), 0, dp(8));
+        sw.setOnCheckedChangeListener((bv, on) -> Cfg.p(this).edit().putBoolean(key, on).apply());
+        p.addView(sw);
     }
 
-    private void rangeSlider(String title, final String key, final int min, int max, int def) {
-        final TextView label = text(title + ": " + Cfg.p(this).getInt(key, def), 13, MUTED);
-        SeekBar sb = new SeekBar(this);
-        sb.setMax(max - min);
-        sb.setProgress(Cfg.p(this).getInt(key, def) - min);
-        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
-                label.setText(title + ": " + (v + min));
-                if (user) Cfg.p(SettingsActivity.this).edit().putInt(key, v + min).apply();
-            }
-            @Override public void onStartTrackingTouch(SeekBar s) {}
-            @Override public void onStopTrackingTouch(SeekBar s) {}
-        });
-        col.addView(sb);
+    private void tintBar(SeekBar sb) {
+        sb.setProgressTintList(ColorStateList.valueOf(accent));
+        sb.setThumbTintList(ColorStateList.valueOf(accent));
     }
 
-    private void slider(String title, final String key, int max, int def) {
-        text(title, 13, MUTED);
+    private void slider(LinearLayout p, String title, final String key, int max, int def) {
+        label(p, title, 13, MUTED);
         SeekBar sb = new SeekBar(this);
         sb.setMax(max);
         sb.setProgress(Cfg.p(this).getInt(key, def));
+        tintBar(sb);
         sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
                 if (user) Cfg.p(SettingsActivity.this).edit().putInt(key, v).apply();
@@ -215,7 +297,86 @@ public class SettingsActivity extends Activity {
             @Override public void onStartTrackingTouch(SeekBar s) {}
             @Override public void onStopTrackingTouch(SeekBar s) {}
         });
-        col.addView(sb);
+        p.addView(sb);
+    }
+
+    private void rangeSlider(LinearLayout p, final String title, final String key, final int min, int max, int def) {
+        final TextView lb = label(p, title + ": " + Cfg.p(this).getInt(key, def), 13, MUTED);
+        SeekBar sb = new SeekBar(this);
+        sb.setMax(max - min);
+        sb.setProgress(Cfg.p(this).getInt(key, def) - min);
+        tintBar(sb);
+        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
+                lb.setText(title + ": " + (v + min));
+                if (user) Cfg.p(SettingsActivity.this).edit().putInt(key, v + min).apply();
+            }
+            @Override public void onStartTrackingTouch(SeekBar s) {}
+            @Override public void onStopTrackingTouch(SeekBar s) {}
+        });
+        p.addView(sb);
+    }
+
+    private void colorRow(LinearLayout p, String title, final String key, final int def) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(8), 0, dp(8));
+        TextView t = new TextView(this);
+        t.setText(title);
+        t.setTextSize(14);
+        t.setTextColor(Color.WHITE);
+        row.addView(t, new LinearLayout.LayoutParams(0, WRAP, 1f));
+        View sw = new View(this);
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(Cfg.p(this).getInt(key, def));
+        g.setCornerRadius(dp(6));
+        g.setStroke(dp(1), 0xFF5A5A70);
+        sw.setBackground(g);
+        row.addView(sw, new LinearLayout.LayoutParams(dp(44), dp(26)));
+        row.setOnClickListener(v -> pickColor(title, key, def));
+        p.addView(row);
+    }
+
+    /** Opens the color wheel. Changes apply to the keyboard live. */
+    private void pickColor(String title, final String key, final int def) {
+        int start = Cfg.p(this).getInt(key, def);
+        if (start == 0) start = def;
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(16), dp(8), dp(16), dp(8));
+        final ColorWheelView wheel = new ColorWheelView(this);
+        wheel.setColor(start);
+        wheel.setListener(c -> Cfg.p(this).edit().putInt(key, c).apply());
+        box.addView(wheel, new LinearLayout.LayoutParams(MATCH, WRAP));
+        TextView lb = new TextView(this);
+        lb.setText("Brightness");
+        lb.setTextColor(MUTED);
+        lb.setTextSize(13);
+        box.addView(lb);
+        float[] hsv = new float[3];
+        Color.colorToHSV(start, hsv);
+        SeekBar sb = new SeekBar(this);
+        sb.setMax(100);
+        sb.setProgress((int) (hsv[2] * 100));
+        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
+                if (user) wheel.setValue(v / 100f);
+            }
+            @Override public void onStartTrackingTouch(SeekBar s) {}
+            @Override public void onStopTrackingTouch(SeekBar s) {}
+        });
+        box.addView(sb);
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(title)
+                .setView(box)
+                .setPositiveButton("Done", null)
+                .setNeutralButton("Reset", (d, w) -> {
+                    if (key.equals("tint")) Cfg.p(this).edit().putInt(key, 0).apply();
+                    else Cfg.p(this).edit().remove(key).apply();
+                })
+                .setOnDismissListener(d -> selectTab(tab))
+                .show();
     }
 
     private void pick(String mime, int req) {
@@ -242,6 +403,7 @@ public class SettingsActivity extends Activity {
             } else {
                 toast("Background set");
             }
+            refreshPreview();
         } else if (req == REQ_FONT) {
             File f = Cfg.fontFile(this);
             if (!copy(u, f)) return;
@@ -252,6 +414,8 @@ public class SettingsActivity extends Activity {
                 f.delete();
                 toast("That file is not a usable font");
             }
+            refreshPreview();
+            selectTab(tab);
         }
     }
 

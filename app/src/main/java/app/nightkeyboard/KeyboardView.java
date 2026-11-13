@@ -63,6 +63,8 @@ public class KeyboardView extends View {
     private int fit;
     private int heightPct = 100;
     private boolean spaceSwipe = true;
+    private int accent = Cfg.DEFAULT_ACCENT;
+    private boolean previewMode;
     private int spaceId = -1;
     private float spaceAnchorX;
     private boolean spaceDragged;
@@ -136,6 +138,9 @@ public class KeyboardView extends View {
 
     public void setListener(Listener l) { listener = l; }
 
+    /** Preview mode: draws like the real keyboard but ignores touches (used inside Settings). */
+    public void setPreview(boolean on) { previewMode = on; }
+
     public void setSymbols(boolean on) {
         symbols = on;
         shift = 0;
@@ -154,6 +159,7 @@ public class KeyboardView extends View {
         fit = Cfg.fit(c);
         heightPct = Cfg.heightPct(c);
         spaceSwipe = Cfg.spaceSwipe(c);
+        accent = Cfg.accent(c);
         int tint = Cfg.tint(c);
         pBmp.setColorFilter(tint == 0 ? null : new PorterDuffColorFilter(tint, PorterDuff.Mode.MULTIPLY));
     }
@@ -317,7 +323,7 @@ public class KeyboardView extends View {
         for (List<Key> row : rows) {
             for (Key k : row) {
                 boolean down = isPressed(k);
-                int base = k.code == ENTER ? 0xFF7C6CF0 : keyColor;
+                int base = k.code == ENTER ? accent : keyColor;
                 int base0 = k.code == 0 ? letterAlpha : otherAlpha;
                 int a = down ? Math.min(255, base0 + 55) : base0;
                 pFill.setColor(down && k.code != ENTER ? 0xFF2A2A38 : base);
@@ -468,6 +474,7 @@ public class KeyboardView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
+        if (previewMode) return false;
         int a = e.getActionMasked();
         int idx = e.getActionIndex();
         int id = e.getPointerId(idx);

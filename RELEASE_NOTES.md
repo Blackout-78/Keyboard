@@ -1,4 +1,5 @@
-Keyboard 0.1.5
+Keyboard 0.2.0
 
-Added: Cut key and Undo key on the toolbar (tap Undo, hold Undo for Redo). No clipboard history: nothing is stored.
+New Settings: four tabs (Theme, Typing, Privacy, About) with a live preview of the real keyboard.
+Added: color wheel for the accent color (Enter key and Settings), key color, and image tint.
 No internet permission. No data collected.

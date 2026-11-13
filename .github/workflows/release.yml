@@ -24,7 +24,15 @@ jobs:
           KEYSTORE_PATH: ${{ runner.temp }}/keystore.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        run: gradle :app:assembleRelease --no-daemon
+        run: |
+          set +e
+          gradle :app:assembleRelease --no-daemon --console=plain > build.log 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then
+            MSG=$(grep -E "error:|What went wrong|FAILED|Could not|Execution failed|symbol:|location:" -A2 build.log | head -40 | tr '\n' '|' | cut -c1-1800)
+            echo "::error title=Build failed::$MSG"
+          fi
+          exit $code
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

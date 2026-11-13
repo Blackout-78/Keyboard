@@ -94,7 +94,7 @@ public class SettingsActivity extends Activity {
         else if (i == 2) buildPrivacy();
         else buildAbout();
         for (int k = 0; k < tabBar.getChildCount(); k++) {
-            ((TextView) tabBar.getChildAt(k)).setTextColor(k == i ? accent : MUTED);
+            ((TextView) tabBar.getChildAt(k)).setTextColor(k == i ? Cfg.ink(accent) : MUTED);
         }
     }
 
@@ -217,7 +217,7 @@ public class SettingsActivity extends Activity {
                 toast("No browser found");
             }
         });
-        rel.setTextColor(accent);
+        rel.setTextColor(Cfg.ink(accent));
     }
 
     // ---- helpers ----
@@ -246,7 +246,7 @@ public class SettingsActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(MATCH, WRAP);
         lp.topMargin = dp(10);
         col.addView(c, lp);
-        if (title != null) label(c, title, 11, accent);
+        if (title != null) label(c, title, 11, Cfg.ink(accent));
         return c;
     }
 

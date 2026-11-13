@@ -11,7 +11,7 @@ import java.io.OutputStream;
 final class Cfg {
     static final int DEFAULT_KEY_ALPHA = 200;
     static final int DEFAULT_DIM = 90;
-    static final int DEFAULT_ACCENT = 0xFF7C6CF0;
+    static final int DEFAULT_ACCENT = 0xFF23295D;
 
     private Cfg() {}
 
@@ -48,6 +48,12 @@ final class Cfg {
     static boolean spaceSwipe(Context c) { return p(c).getBoolean("spaceSwipe", true); }
 
     /** Accent color: Enter key and Settings highlights. */
+    /** Lighter version of a color, for text on black. */
+    static int ink(int c) {
+        int r = (int) (((c >> 16) & 255) * 0.4 + 255 * 0.6), g = (int) (((c >> 8) & 255) * 0.4 + 255 * 0.6), b = (int) ((c & 255) * 0.4 + 255 * 0.6);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
     static int accent(Context c) { return p(c).getInt("accent", DEFAULT_ACCENT); }
 
     /** Color of letters, numbers and toolbar icons. */

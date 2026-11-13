@@ -97,6 +97,11 @@ public class SettingsActivity extends Activity {
             Cfg.fontFile(this).delete();
             toast("Font removed");
         });
+        button("Slide on Space bar to move cursor: toggle", v -> {
+            boolean on = !Cfg.spaceSwipe(this);
+            Cfg.p(this).edit().putBoolean("spaceSwipe", on).apply();
+            toast(on ? "Space-bar cursor on" : "Space-bar cursor off");
+        });
         button("Hint symbols on keys: toggle", v -> {
             boolean on = !Cfg.hints(this);
             Cfg.p(this).edit().putBoolean("hints", on).apply();

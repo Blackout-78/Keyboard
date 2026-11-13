@@ -60,6 +60,11 @@ public class KeyboardService extends InputMethodService implements KeyboardView.
     }
 
     @Override
+    public void onCursor(int direction) {
+        sendDownUpKeyEvents(direction < 0 ? KeyEvent.KEYCODE_DPAD_LEFT : KeyEvent.KEYCODE_DPAD_RIGHT);
+    }
+
+    @Override
     public void onAction(int id) {
         InputConnection ic = getCurrentInputConnection();
         switch (id) {

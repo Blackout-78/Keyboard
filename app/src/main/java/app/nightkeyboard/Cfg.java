@@ -41,6 +41,9 @@ final class Cfg {
     /** Keyboard height as a percent of normal, 60 to 140. */
     static int heightPct(Context c) { return p(c).getInt("heightPct", 100); }
 
+    /** Slide a finger along the Space bar to move the cursor. */
+    static boolean spaceSwipe(Context c) { return p(c).getBoolean("spaceSwipe", true); }
+
     static boolean hints(Context c) { return p(c).getBoolean("hints", true); }
 
     /** Built-in Skull theme: copies the bundled artwork into private storage and sets the look. */

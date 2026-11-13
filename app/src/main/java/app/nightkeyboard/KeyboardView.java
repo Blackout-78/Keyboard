@@ -28,6 +28,7 @@ public class KeyboardView extends View {
         void onText(String s);
         void onKey(int code);
         void onAction(int toolbarId);
+        void onCursor(int direction);
     }
 
     static final int DEL = -2, SHIFT = -1, SYM = -3, ENTER = -4, SPACE = -5, ABC = -6, EMOJI = -7, NONE = -9;
@@ -61,6 +62,10 @@ public class KeyboardView extends View {
     private final Paint pBmp = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private int fit;
     private int heightPct = 100;
+    private boolean spaceSwipe = true;
+    private int spaceId = -1;
+    private float spaceAnchorX;
+    private boolean spaceDragged;
 
     private final List<List<Key>> rows = new ArrayList<>();
     private final RectF[] toolRects = new RectF[TOOLS.length];
@@ -137,6 +142,7 @@ public class KeyboardView extends View {
         hints = Cfg.hints(c);
         fit = Cfg.fit(c);
         heightPct = Cfg.heightPct(c);
+        spaceSwipe = Cfg.spaceSwipe(c);
         int tint = Cfg.tint(c);
         pBmp.setColorFilter(tint == 0 ? null : new PorterDuffColorFilter(tint, PorterDuff.Mode.MULTIPLY));
     }
@@ -462,6 +468,9 @@ public class KeyboardView extends View {
             case MotionEvent.ACTION_POINTER_UP:
                 up(id);
                 break;
+            case MotionEvent.ACTION_MOVE:
+                for (int i = 0; i < e.getPointerCount(); i++) moveSpace(e.getPointerId(i), e.getX(i));
+                break;
             case MotionEvent.ACTION_CANCEL:
                 cancelAll();
                 break;
@@ -490,6 +499,11 @@ public class KeyboardView extends View {
         }
         if (hit == null) return;
         pressedKeys.put(id, hit);
+        if (hit.code == SPACE) {
+            spaceId = id;
+            spaceAnchorX = x;
+            spaceDragged = false;
+        }
         if (hit.code == DEL) {
             if (listener != null) listener.onKey(DEL);
             repeatKey = hit;
@@ -529,7 +543,21 @@ public class KeyboardView extends View {
         invalidate();
     }
 
+    private void moveSpace(int id, float x) {
+        if (!spaceSwipe || id != spaceId) return;
+        Key k = pressedKeys.get(id);
+        if (k == null || k.code != SPACE || listener == null) return;
+        float step = dp * 16;
+        while (Math.abs(x - spaceAnchorX) >= step) {
+            int dir = x > spaceAnchorX ? 1 : -1;
+            listener.onCursor(dir);
+            spaceAnchorX += dir * step;
+            spaceDragged = true;
+        }
+    }
+
     private void cancelAll() {
+        spaceId = -1;
         handler.removeCallbacks(longRun);
         handler.removeCallbacks(repeatRun);
         repeatKey = null;
@@ -553,7 +581,11 @@ public class KeyboardView extends View {
             case SYM: setSymbols(true); break;
             case ABC: setSymbols(false); break;
             case ENTER: listener.onKey(ENTER); break;
-            case SPACE: listener.onText(" "); break;
+            case SPACE:
+                if (!spaceDragged) listener.onText(" ");
+                spaceDragged = false;
+                spaceId = -1;
+                break;
             case EMOJI: break;
             case 0: {
                 boolean letter = k.label.length() == 1 && Character.isLetter(k.label.charAt(0));

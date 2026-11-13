@@ -85,6 +85,12 @@ public class KeyboardView extends View {
     private long lastShiftTap;
     private boolean incognito = true;
 
+    private final EmojiPanel emoji = new EmojiPanel(getContext(), getResources().getDisplayMetrics().density, new EmojiPanel.Out() {
+        @Override public void insert(String s) { if (listener != null) listener.onText(s); }
+        @Override public void del() { if (listener != null) listener.onKey(DEL); }
+        @Override public void redraw() { invalidate(); }
+    });
+
     private static final int V_IDLE = 0, V_LISTEN = 1, V_REVIEW = 2, V_WORK = 3, V_MSG = 4;
     private int voice = V_IDLE;
     private String voiceText = "";
@@ -95,6 +101,7 @@ public class KeyboardView extends View {
 
     /** Stops the mic and wipes all voice state. Called whenever the keyboard opens or closes. */
     public void clearVoice() {
+        emoji.close();
         if (voice == V_LISTEN) Voice.cancel();
         voice = V_IDLE;
         voiceText = "";
@@ -224,6 +231,11 @@ public class KeyboardView extends View {
     }
 
     private void sendText(String s) {
+        if (emoji.active && emoji.searching) {
+            emoji.type(s);
+            invalidate();
+            return;
+        }
         if (voice == V_REVIEW) {
             voiceText += s;
             invalidate();
@@ -233,6 +245,11 @@ public class KeyboardView extends View {
     }
 
     private void sendKey(int code) {
+        if (emoji.active && emoji.searching) {
+            if (code == DEL) emoji.backspace();
+            invalidate();
+            return;
+        }
         if (voice == V_REVIEW) {
             if (code == DEL) {
                 if (!voiceText.isEmpty()) voiceText = voiceText.substring(0, voiceText.offsetByCodePoints(voiceText.length(), -1));
@@ -331,6 +348,7 @@ public class KeyboardView extends View {
         hintColor = Cfg.hintColor(c);
         pText.setColor(textColor);
         pHint.setColor(hintColor);
+        emoji.setTheme(textColor, accent, hintColor, keyColor, otherAlpha, Cfg.skullFaces(c));
         int tint = Cfg.tint(c);
         pBmp.setColorFilter(tint == 0 ? null : new PorterDuffColorFilter(tint, PorterDuff.Mode.MULTIPLY));
     }
@@ -487,10 +505,18 @@ public class KeyboardView extends View {
             }
             c.drawColor(Color.argb(dim, 0, 0, 0));
         }
-        if (voice == V_IDLE) { for (int i = 0; i < TOOLS.length; i++) drawTool(c, TOOLS[i], toolRects[i]); }
+        if (emoji.active) emoji.drawStrip(c, w, toolbarH(), pText.getTypeface());
+        else if (voice == V_IDLE) { for (int i = 0; i < TOOLS.length; i++) drawTool(c, TOOLS[i], toolRects[i]); }
         else drawVoiceStrip(c, w);
         float rad = dp * 8;
+        if (emoji.active && !emoji.searching) {
+            emoji.drawBody(c, w, toolbarH(), rowH(), rows.size(), pText.getTypeface());
+            c.drawText(stamp, dp * 8, h - dp * 4, pStamp);
+            return;
+        }
+        int rowIdx = 0;
         for (List<Key> row : rows) {
+            if (emoji.active && rowIdx++ == 0) continue;
             for (Key k : row) {
                 boolean down = isPressed(k);
                 int base = k.code == ENTER ? accent : keyColor;
@@ -502,6 +528,7 @@ public class KeyboardView extends View {
                 drawKeyFace(c, k);
             }
         }
+        if (emoji.active) emoji.drawResults(c, w, toolbarH(), rowH(), pText.getTypeface());
         c.drawText(stamp, dp * 8, h - dp * 4, pStamp);
     }
 
@@ -651,6 +678,7 @@ public class KeyboardView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         if (previewMode) return false;
+        if (emoji.active && emoji.touch(e, toolbarH(), rowH(), rows.size(), getWidth())) return true;
         int a = e.getActionMasked();
         int idx = e.getActionIndex();
         int id = e.getPointerId(idx);
@@ -799,7 +827,7 @@ public class KeyboardView extends View {
                 spaceDragged = false;
                 spaceId = -1;
                 break;
-            case EMOJI: break;
+            case EMOJI: if (voice == V_IDLE) emoji.open(); break;
             case 0: {
                 boolean letter = k.label.length() == 1 && Character.isLetter(k.label.charAt(0));
                 sendText(letter && shift != 0 ? k.label.toUpperCase() : k.label);

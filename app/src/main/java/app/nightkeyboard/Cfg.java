@@ -56,6 +56,8 @@ final class Cfg {
     /** Color of the small hint symbols. */
     static int hintColor(Context c) { return p(c).getInt("hintColor", 0xFF9A9AB0); }
 
+    static boolean skullFaces(Context c) { return p(c).getBoolean("skullFaces", true); }
+
     static boolean hints(Context c) { return p(c).getBoolean("hints", true); }
 
     /** Built-in Skull theme: copies the bundled artwork into private storage and sets the look. */

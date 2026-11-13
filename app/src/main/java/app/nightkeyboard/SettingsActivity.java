@@ -175,6 +175,7 @@ public class SettingsActivity extends Activity {
         c = card("TYPING");
         toggle(c, "Slide on Space bar to move cursor", "spaceSwipe", true);
         toggle(c, "Hint symbols on keys (hold a key to type its hint)", "hints", true);
+        toggle(c, "Skull faces in the emoji picker (types the normal emoji)", "skullFaces", true);
         label(c, "Suggestions and autocorrect: coming next.", 13, MUTED);
 
         c = card("VOICE (OFFLINE)");
@@ -208,6 +209,7 @@ public class SettingsActivity extends Activity {
         label(c, "Version " + BuildConfig.VERSION_NAME + " (build " + BuildConfig.VERSION_CODE + ")", 14, Color.WHITE);
         label(c, "Offline. Private. Installed only through GitHub.", 13, MUTED);
         label(c, "Typewriter font: Special Elite by Astigmatic, Apache License 2.0 (license bundled in the app).", 12, MUTED);
+        label(c, "Emoji data: Emojibase (MIT), from Unicode CLDR (Unicode License). Emoji are drawn by your phone's own font; skull faces are drawn by this app.", 12, MUTED);
         Button rel = button(c, "Open GitHub Releases", v -> {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(RELEASES)));

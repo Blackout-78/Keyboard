@@ -69,7 +69,21 @@ final class Cfg {
         p(c).edit().putInt("keyColor", 0xFF000000).putInt("letterAlpha", 170).putInt("otherAlpha", 170).putInt("dim", 0)
                 .putInt("fit", 0).putInt("tint", 0xFF5C7CFA)
                 .putBoolean("themeInit", true).apply();
+        applyTypewriterFont(c);
         return true;
+    }
+
+    /** Built-in Typewriter font (Special Elite, Apache 2.0): copied into private storage. */
+    static boolean applyTypewriterFont(Context c) {
+        try (InputStream in = c.getAssets().open("fonts/SpecialElite.ttf");
+             OutputStream out = new FileOutputStream(fontFile(c))) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /** First run: start with the Skull theme. */

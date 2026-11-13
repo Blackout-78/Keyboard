@@ -145,6 +145,11 @@ public class SettingsActivity extends Activity {
 
         c = card("FONT");
         label(c, Cfg.fontFile(this).exists() ? "Custom font in use" : "Default font in use", 13, MUTED);
+        button(c, "Use built-in Typewriter font", v -> {
+            toast(Cfg.applyTypewriterFont(this) ? "Typewriter font set" : "Could not apply");
+            refreshPreview();
+            selectTab(tab);
+        });
         button(c, "Choose font (.ttf)", v -> pick("*/*", REQ_FONT));
         button(c, "Remove custom font", v -> {
             Cfg.fontFile(this).delete();
@@ -186,6 +191,7 @@ public class SettingsActivity extends Activity {
         LinearLayout c = card("ABOUT");
         label(c, "Version " + BuildConfig.VERSION_NAME + " (build " + BuildConfig.VERSION_CODE + ")", 14, Color.WHITE);
         label(c, "Offline. Private. Installed only through GitHub.", 13, MUTED);
+        label(c, "Typewriter font: Special Elite by Astigmatic, Apache License 2.0 (license bundled in the app).", 12, MUTED);
         Button rel = button(c, "Open GitHub Releases", v -> {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(RELEASES)));

@@ -62,6 +62,7 @@ public class SettingsActivity extends Activity {
 
         section("THEME");
         button("Apply Skull theme (built-in)", v -> toast(Cfg.applySkull(this) ? "Skull theme applied" : "Could not apply"));
+        rangeSlider("Keyboard height (percent)", "heightPct", 60, 140, 100);
         button("Choose background image", v -> pick("image/*", REQ_IMAGE));
         button("Remove background image", v -> {
             Cfg.bgFile(this).delete();
@@ -179,6 +180,22 @@ public class SettingsActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.rightMargin = dp(4);
         row.addView(bt, lp);
+    }
+
+    private void rangeSlider(String title, final String key, final int min, int max, int def) {
+        final TextView label = text(title + ": " + Cfg.p(this).getInt(key, def), 13, MUTED);
+        SeekBar sb = new SeekBar(this);
+        sb.setMax(max - min);
+        sb.setProgress(Cfg.p(this).getInt(key, def) - min);
+        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
+                label.setText(title + ": " + (v + min));
+                if (user) Cfg.p(SettingsActivity.this).edit().putInt(key, v + min).apply();
+            }
+            @Override public void onStartTrackingTouch(SeekBar s) {}
+            @Override public void onStopTrackingTouch(SeekBar s) {}
+        });
+        col.addView(sb);
     }
 
     private void slider(String title, final String key, int max, int def) {

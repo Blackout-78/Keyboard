@@ -38,6 +38,9 @@ final class Cfg {
     /** Image tint color, 0 = none. */
     static int tint(Context c) { return p(c).getInt("tint", 0); }
 
+    /** Keyboard height as a percent of normal, 60 to 140. */
+    static int heightPct(Context c) { return p(c).getInt("heightPct", 100); }
+
     static boolean hints(Context c) { return p(c).getBoolean("hints", true); }
 
     /** Built-in Skull theme: copies the bundled artwork into private storage and sets the look. */

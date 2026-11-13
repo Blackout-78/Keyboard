@@ -60,6 +60,7 @@ public class KeyboardView extends View {
     private final Paint pStamp = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint pBmp = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private int fit;
+    private int heightPct = 100;
 
     private final List<List<Key>> rows = new ArrayList<>();
     private final RectF[] toolRects = new RectF[TOOLS.length];
@@ -135,12 +136,13 @@ public class KeyboardView extends View {
         dim = Cfg.dim(c);
         hints = Cfg.hints(c);
         fit = Cfg.fit(c);
+        heightPct = Cfg.heightPct(c);
         int tint = Cfg.tint(c);
         pBmp.setColorFilter(tint == 0 ? null : new PorterDuffColorFilter(tint, PorterDuff.Mode.MULTIPLY));
     }
 
     private final android.content.SharedPreferences.OnSharedPreferenceChangeListener prefListener =
-            (sp, key) -> { readPrefs(); invalidate(); };
+            (sp, key) -> { readPrefs(); requestLayout(); layoutKeys(getWidth()); invalidate(); };
 
     @Override
     protected void onAttachedToWindow() {
@@ -228,7 +230,7 @@ public class KeyboardView extends View {
     }
 
     private float toolbarH() { return dp * 52; }
-    private float rowH() { return dp * 52; }
+    private float rowH() { return dp * 52 * heightPct / 100f; }
     private float bottomPad() { return dp * 16; }
 
     @Override

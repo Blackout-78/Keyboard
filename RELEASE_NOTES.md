@@ -1,6 +1,6 @@
-Keyboard 0.3.0
+Keyboard 0.4.0
 
-Added: mic key in the toolbar (stage 1 of private voice input). Tap the mic to listen, tap again to stop, then review the text with Insert, Edit in field, or Discard. Nothing is typed until you confirm.
-This stage is a layout test only: it shows a fake test sentence and does not record. No microphone permission yet.
-Voice state is wiped whenever the keyboard closes.
-No internet permission. No data collected.
+Added: private offline voice input. Tap the mic, speak, tap to stop. The text appears in a strip above the keys; check it, fix it with the keys if needed, then tap the check to insert or the X to discard. Nothing is typed until you confirm.
+Runs fully on the phone with whisper.cpp (MIT). Audio is kept in memory only and wiped. No internet permission.
+New microphone permission (used only while you listen). Set up: Settings, Typing, Voice: Allow microphone, then Load voice model (ggml-base.en.bin).
+Changed: the review strip replaces the toolbar instead of covering the keys, and follows your key transparency.

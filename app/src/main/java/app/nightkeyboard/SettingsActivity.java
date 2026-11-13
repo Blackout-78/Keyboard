@@ -30,7 +30,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public class SettingsActivity extends Activity {
-    private static final int REQ_IMAGE = 1, REQ_FONT = 2;
+    private static final int REQ_IMAGE = 1, REQ_FONT = 2, REQ_VOICE = 3, REQ_MIC = 7;
     private static final int BG = 0xFF0B0B10, CARD = 0xFF13131A, BTN = 0xFF1B1B24, MUTED = 0xFF8B8BA3;
     private static final String RELEASES = "https://github.com/Blackout-78/Keyboard/releases";
     private static final String[] TABS = {"Theme", "Typing", "Privacy", "About"};
@@ -176,6 +176,22 @@ public class SettingsActivity extends Activity {
         toggle(c, "Slide on Space bar to move cursor", "spaceSwipe", true);
         toggle(c, "Hint symbols on keys (hold a key to type its hint)", "hints", true);
         label(c, "Suggestions and autocorrect: coming next.", 13, MUTED);
+
+        c = card("VOICE (OFFLINE)");
+        File vm = Cfg.voiceFile(this);
+        boolean mic = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        label(c, "Voice runs fully on this phone. Audio is never saved or sent. No internet.", 13, MUTED);
+        label(c, mic ? "Microphone: allowed" : "Microphone: not allowed yet", 14, Color.WHITE);
+        if (!mic) button(c, "Allow microphone", v -> requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, REQ_MIC));
+        label(c, vm.exists() ? "Voice model: loaded (" + (vm.length() / 1048576) + " MB)" : "Voice model: not loaded", 14, Color.WHITE);
+        button(c, "Load voice model (ggml .bin)", v -> pick("*/*", REQ_VOICE));
+        if (vm.exists()) button(c, "Remove voice model", v -> { vm.delete(); selectTab(tab); });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int req, String[] perms, int[] results) {
+        super.onRequestPermissionsResult(req, perms, results);
+        selectTab(tab);
     }
 
     private void buildPrivacy() {
@@ -399,6 +415,36 @@ public class SettingsActivity extends Activity {
         super.onActivityResult(req, res, data);
         if (res != RESULT_OK || data == null || data.getData() == null) return;
         Uri u = data.getData();
+        if (req == REQ_VOICE) {
+            toast("Loading voice model\u2026");
+            final Uri src = u;
+            new Thread(new Runnable() {
+                @Override public void run() {
+                    final File f = Cfg.voiceFile(SettingsActivity.this);
+                    boolean ok = false;
+                    try (InputStream in = getContentResolver().openInputStream(src);
+                         OutputStream out = new FileOutputStream(f)) {
+                        byte[] buf = new byte[65536];
+                        int n;
+                        if (in != null) {
+                            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                            ok = true;
+                        }
+                    } catch (Exception e) {
+                        ok = false;
+                    }
+                    final boolean good = ok && f.length() > 1000000;
+                    if (!good) f.delete();
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            toast(good ? "Voice model loaded" : "Could not load that file");
+                            selectTab(tab);
+                        }
+                    });
+                }
+            }).start();
+            return;
+        }
         if (req == REQ_IMAGE) {
             File f = Cfg.bgFile(this);
             if (!copy(u, f)) return;

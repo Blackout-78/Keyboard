@@ -1,6 +1,7 @@
 package app.nightkeyboard;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -84,89 +85,162 @@ public class KeyboardView extends View {
     private long lastShiftTap;
     private boolean incognito = true;
 
-    private static final String TEST_TRANSCRIPT = "Test only: voice is not connected yet.";
-    private int voice; // 0 idle, 1 listening, 2 review
+    private static final int V_IDLE = 0, V_LISTEN = 1, V_REVIEW = 2, V_WORK = 3, V_MSG = 4;
+    private int voice = V_IDLE;
     private String voiceText = "";
-    private final RectF vInsert = new RectF(), vEdit = new RectF(), vDiscard = new RectF();
+    private boolean msgOpensSettings;
+    private int voiceGen;
+    private final RectF vInsert = new RectF(), vDiscard = new RectF();
     private final TextPaint pVoice = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
-    /** Wipes any voice state. Called whenever the keyboard opens or closes. */
+    /** Stops the mic and wipes all voice state. Called whenever the keyboard opens or closes. */
     public void clearVoice() {
-        voice = 0;
+        if (voice == V_LISTEN) Voice.cancel();
+        voice = V_IDLE;
+        voiceText = "";
+        voiceGen++;
+        invalidate();
+    }
+
+    private void showMsg(String m, boolean opensSettings) {
+        voice = V_MSG;
+        voiceText = m;
+        msgOpensSettings = opensSettings;
+        invalidate();
+    }
+
+    private void startListening() {
+        Context ctx = getContext();
+        if (!Voice.available()) { showMsg("Voice engine is missing from this build", false); return; }
+        if (ctx.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            showMsg("Tap here, then Typing: Allow microphone", true);
+            return;
+        }
+        if (!Cfg.voiceFile(ctx).exists()) {
+            showMsg("Tap here, then Typing: Load voice model", true);
+            return;
+        }
+        if (!Voice.start()) { showMsg("Could not open the microphone", false); return; }
+        voice = V_LISTEN;
         voiceText = "";
         invalidate();
     }
 
-    private void toggleMic() {
-        if (voice == 0) {
-            voice = 1;
-        } else if (voice == 1) {
-            voice = 2;
-            voiceText = TEST_TRANSCRIPT;
-        } else {
-            clearVoice();
-            return;
-        }
+    private void stopListening() {
+        final float[] audio = Voice.stop();
+        voice = V_WORK;
         invalidate();
+        final int gen = ++voiceGen;
+        final String model = Cfg.voiceFile(getContext()).getAbsolutePath();
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final String text = Voice.transcribe(model, audio);
+                handler.post(new Runnable() {
+                    @Override public void run() {
+                        if (gen != voiceGen || voice != V_WORK) return;
+                        if (text == null) showMsg("Could not run the voice model", false);
+                        else if (text.isEmpty()) showMsg("Did not catch that", false);
+                        else { voice = V_REVIEW; voiceText = text; invalidate(); }
+                    }
+                });
+            }
+        }).start();
     }
 
-    private void drawVoicePanel(Canvas c, int w, int h) {
-        float top = toolbarH() + dp * 3, bot = h - dp * 16, l = dp * 3, r = w - dp * 3;
-        RectF p = new RectF(l, top, r, bot);
+    private void insertVoice() {
+        String t = voiceText;
+        clearVoice();
+        if (listener != null && !t.isEmpty()) listener.onText(t);
+    }
+
+    private void drawVoiceStrip(Canvas c, int w) {
+        RectF p = new RectF(dp * 3, dp * 3, w - dp * 3, toolbarH() - dp * 3);
         pFill.setColor(keyColor);
-        pFill.setAlpha(Math.max(otherAlpha, 200));
+        pFill.setAlpha(otherAlpha);
         c.drawRoundRect(p, dp * 8, dp * 8, pFill);
         pLine.setColor(accent);
         pLine.setAlpha(255);
         c.drawRoundRect(p, dp * 8, dp * 8, pLine);
         pVoice.setTypeface(pText.getTypeface());
         pVoice.setColor(textColor);
-        pVoice.setTextSize(dp * 16);
+        pVoice.setTextSize(dp * 15);
         pVoice.setTextAlign(Paint.Align.LEFT);
-        int tw = (int) (p.width() - dp * 24);
-        String msg = voice == 1 ? "Listening\u2026 tap the mic to stop" : voiceText;
-        StaticLayout sl = StaticLayout.Builder.obtain(msg, 0, msg.length(), pVoice, tw).setAlignment(Layout.Alignment.ALIGN_NORMAL).build();
-        c.save();
-        c.translate(p.left + dp * 12, p.top + dp * 12);
-        c.clipRect(0, 0, tw, p.height() - dp * 64);
-        sl.draw(c);
-        c.restore();
-        if (voice != 2) return;
-        float bh = dp * 40, by = p.bottom - bh - dp * 8, bw = (p.width() - dp * 32) / 3f;
-        vInsert.set(p.left + dp * 8, by, p.left + dp * 8 + bw, by + bh);
-        vEdit.set(vInsert.right + dp * 8, by, vInsert.right + dp * 8 + bw, by + bh);
-        vDiscard.set(vEdit.right + dp * 8, by, vEdit.right + dp * 8 + bw, by + bh);
-        drawVBtn(c, vInsert, "Insert", true);
-        drawVBtn(c, vEdit, "Edit in field", false);
-        drawVBtn(c, vDiscard, "Discard", false);
-    }
-
-    private void drawVBtn(Canvas c, RectF r, String label, boolean primary) {
-        if (primary) {
+        float base = p.centerY() + dp * 5;
+        if (voice == V_REVIEW) {
+            float bs = p.height() - dp * 10;
+            vDiscard.set(p.right - dp * 5 - bs, p.top + dp * 5, p.right - dp * 5, p.top + dp * 5 + bs);
+            vInsert.set(vDiscard.left - dp * 6 - bs, vDiscard.top, vDiscard.left - dp * 6, vDiscard.bottom);
             pFill.setColor(accent);
             pFill.setAlpha(255);
-            c.drawRoundRect(r, dp * 8, dp * 8, pFill);
-        } else {
+            c.drawRoundRect(vInsert, dp * 8, dp * 8, pFill);
+            pLine.setColor(textColor);
+            float cx = vInsert.centerX(), cy = vInsert.centerY(), s = bs * 0.22f;
+            c.drawLine(cx - s, cy, cx - s * 0.3f, cy + s * 0.8f, pLine);
+            c.drawLine(cx - s * 0.3f, cy + s * 0.8f, cx + s, cy - s * 0.7f, pLine);
             pLine.setColor(hintColor);
-            pLine.setAlpha(255);
-            c.drawRoundRect(r, dp * 8, dp * 8, pLine);
+            c.drawRoundRect(vDiscard, dp * 8, dp * 8, pLine);
+            cx = vDiscard.centerX();
+            cy = vDiscard.centerY();
+            c.drawLine(cx - s, cy - s, cx + s, cy + s, pLine);
+            c.drawLine(cx - s, cy + s, cx + s, cy - s, pLine);
+            float room = vInsert.left - p.left - dp * 20;
+            CharSequence t = android.text.TextUtils.ellipsize(voiceText, pVoice, room, android.text.TextUtils.TruncateAt.START);
+            c.drawText(t, 0, t.length(), p.left + dp * 12, base, pVoice);
+            return;
         }
-        pVoice.setTextAlign(Paint.Align.CENTER);
-        pVoice.setTextSize(dp * 14);
-        pVoice.setColor(textColor);
-        c.drawText(label, r.centerX(), r.centerY() + dp * 5, pVoice);
+        String msg;
+        if (voice == V_LISTEN) {
+            msg = "Listening\u2026 tap here to stop";
+            pFill.setColor(accent);
+            pFill.setAlpha(255);
+            c.drawCircle(p.left + dp * 18, p.centerY(), dp * 6, pFill);
+        } else if (voice == V_WORK) {
+            msg = "Transcribing\u2026";
+        } else {
+            msg = voiceText;
+        }
+        float x = voice == V_LISTEN ? p.left + dp * 34 : p.left + dp * 12;
+        CharSequence t = android.text.TextUtils.ellipsize(msg, pVoice, p.right - x - dp * 8, android.text.TextUtils.TruncateAt.END);
+        c.drawText(t, 0, t.length(), x, base, pVoice);
     }
 
     private void voiceTouch(float x, float y) {
-        if (voice != 2) return;
-        if (vInsert.contains(x, y)) {
-            if (listener != null) listener.onText(voiceText);
+        if (voice == V_LISTEN) {
+            stopListening();
+        } else if (voice == V_REVIEW) {
+            if (vInsert.contains(x, y)) insertVoice();
+            else if (vDiscard.contains(x, y)) clearVoice();
+        } else if (voice == V_MSG) {
+            boolean open = msgOpensSettings;
             clearVoice();
-        } else if (vEdit.contains(x, y)) {
-            if (listener != null) listener.onText(voiceText);
-            clearVoice();
-        } else if (vDiscard.contains(x, y)) {
-            clearVoice();
+            if (open) {
+                Intent i = new Intent(getContext(), SettingsActivity.class);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            }
+        }
+    }
+
+    private void sendText(String s) {
+        if (voice == V_REVIEW) {
+            voiceText += s;
+            invalidate();
+        } else if (listener != null) {
+            listener.onText(s);
+        }
+    }
+
+    private void sendKey(int code) {
+        if (voice == V_REVIEW) {
+            if (code == DEL) {
+                if (!voiceText.isEmpty()) voiceText = voiceText.substring(0, voiceText.offsetByCodePoints(voiceText.length(), -1));
+            } else if (code == ENTER) {
+                insertVoice();
+                return;
+            }
+            invalidate();
+        } else if (listener != null) {
+            listener.onKey(code);
         }
     }
 
@@ -184,7 +258,7 @@ public class KeyboardView extends View {
         @Override public void run() {
             if (longKey != null && longKey.hint != null && hints) {
                 longFired = true;
-                if (listener != null) listener.onText(longKey.hint);
+                sendText(longKey.hint);
                 invalidate();
             }
         }
@@ -203,8 +277,8 @@ public class KeyboardView extends View {
     private Key repeatKey;
     private final Runnable repeatRun = new Runnable() {
         @Override public void run() {
-            if (repeatKey != null && listener != null) {
-                listener.onKey(DEL);
+            if (repeatKey != null) {
+                sendKey(DEL);
                 handler.postDelayed(this, 45);
             }
         }
@@ -411,13 +485,9 @@ public class KeyboardView extends View {
             }
             c.drawColor(Color.argb(dim, 0, 0, 0));
         }
-        for (int i = 0; i < TOOLS.length; i++) drawTool(c, TOOLS[i], toolRects[i]);
+        if (voice == V_IDLE) { for (int i = 0; i < TOOLS.length; i++) drawTool(c, TOOLS[i], toolRects[i]); }
+        else drawVoiceStrip(c, w);
         float rad = dp * 8;
-        if (voice != 0) {
-            drawVoicePanel(c, w, h);
-            c.drawText(stamp, dp * 8, h - dp * 4, pStamp);
-            return;
-        }
         for (List<Key> row : rows) {
             for (Key k : row) {
                 boolean down = isPressed(k);
@@ -519,20 +589,10 @@ public class KeyboardView extends View {
                 drawIncognito(c, cx, cy, s, id == T_INC_L);
                 break;
             case T_MIC:
-                if (voice != 0) {
-                    pFill.setColor(accent);
-                    pFill.setAlpha(255);
-                    c.drawCircle(cx, cy, s * 1.3f, pFill);
-                }
-                if (voice == 1) {
-                    pFill.setColor(textColor);
-                    c.drawRect(cx - s * 0.5f, cy - s * 0.5f, cx + s * 0.5f, cy + s * 0.5f, pFill);
-                } else {
-                    c.drawRoundRect(cx - s * 0.35f, cy - s, cx + s * 0.35f, cy + s * 0.2f, s * 0.35f, s * 0.35f, pLine);
-                    c.drawArc(new RectF(cx - s * 0.7f, cy - s * 0.5f, cx + s * 0.7f, cy + s * 0.5f), 0, 180, false, pLine);
-                    c.drawLine(cx, cy + s * 0.5f, cx, cy + s, pLine);
-                    c.drawLine(cx - s * 0.4f, cy + s, cx + s * 0.4f, cy + s, pLine);
-                }
+                c.drawRoundRect(cx - s * 0.35f, cy - s, cx + s * 0.35f, cy + s * 0.2f, s * 0.35f, s * 0.35f, pLine);
+                c.drawArc(new RectF(cx - s * 0.7f, cy - s * 0.5f, cx + s * 0.7f, cy + s * 0.5f), 0, 180, false, pLine);
+                c.drawLine(cx, cy + s * 0.5f, cx, cy + s, pLine);
+                c.drawLine(cx - s * 0.4f, cy + s, cx + s * 0.4f, cy + s, pLine);
                 break;
             case T_SELECT:
                 pLine.setPathEffect(new DashPathEffect(new float[]{dp * 3, dp * 3}, 0));
@@ -614,6 +674,10 @@ public class KeyboardView extends View {
     }
 
     private void down(int id, float x, float y) {
+        if (y < toolbarH() && voice != V_IDLE) {
+            voiceTouch(x, y);
+            return;
+        }
         if (y < toolbarH()) {
             for (int i = 0; i < TOOLS.length; i++) {
                 if (toolRects[i].contains(x, y)) {
@@ -627,10 +691,6 @@ public class KeyboardView extends View {
                 }
             }
             invalidate();
-            return;
-        }
-        if (voice != 0) {
-            voiceTouch(x, y);
             return;
         }
         Key hit = null;
@@ -650,7 +710,7 @@ public class KeyboardView extends View {
             spaceDragged = false;
         }
         if (hit.code == DEL) {
-            if (listener != null) listener.onKey(DEL);
+            sendKey(DEL);
             repeatKey = hit;
             handler.postDelayed(repeatRun, 380);
         } else if (hit.hint != null && hints) {
@@ -666,7 +726,7 @@ public class KeyboardView extends View {
         if (tool != null) {
             pressedTools.remove(id);
             if (tool == T_INC_L || tool == T_INC_R) incognito = !incognito;
-            else if (tool == T_MIC) toggleMic();
+            else if (tool == T_MIC) startListening();
             else if (tool == T_UNDO) {
                 handler.removeCallbacks(toolLongRun);
                 if (!toolLongFired && listener != null) listener.onAction(T_UNDO);
@@ -731,16 +791,16 @@ public class KeyboardView extends View {
             }
             case SYM: setSymbols(true); break;
             case ABC: setSymbols(false); break;
-            case ENTER: listener.onKey(ENTER); break;
+            case ENTER: sendKey(ENTER); break;
             case SPACE:
-                if (!spaceDragged) listener.onText(" ");
+                if (!spaceDragged) sendText(" ");
                 spaceDragged = false;
                 spaceId = -1;
                 break;
             case EMOJI: break;
             case 0: {
                 boolean letter = k.label.length() == 1 && Character.isLetter(k.label.charAt(0));
-                listener.onText(letter && shift != 0 ? k.label.toUpperCase() : k.label);
+                sendText(letter && shift != 0 ? k.label.toUpperCase() : k.label);
                 if (shift == 1) shift = 0;
                 break;
             }

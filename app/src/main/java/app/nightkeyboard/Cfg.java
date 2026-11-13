@@ -21,6 +21,8 @@ final class Cfg {
 
     static File bgFile(Context c) { return new File(c.getFilesDir(), "bg.img"); }
 
+    static File voiceFile(Context c) { return new File(c.getFilesDir(), "voice.bin"); }
+
     static File fontFile(Context c) { return new File(c.getFilesDir(), "font.ttf"); }
 
     /** Opacity of letter, number and symbol keys: 0 transparent to 255 solid. */

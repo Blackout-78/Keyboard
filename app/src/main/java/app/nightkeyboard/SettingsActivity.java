@@ -81,7 +81,8 @@ public class SettingsActivity extends Activity {
         addTint(tints, "Crimson", 0xFFE5384D);
         col.addView(tints);
         slider("Image dimming", "dim", 255, Cfg.DEFAULT_DIM);
-        slider("Key opacity", "keyAlpha", 255, Cfg.DEFAULT_KEY_ALPHA);
+        slider("Letter keys: transparent to solid", "letterAlpha", 255, Cfg.DEFAULT_KEY_ALPHA);
+        slider("Other keys (shift, delete, space, enter): transparent to solid", "otherAlpha", 255, Cfg.DEFAULT_KEY_ALPHA);
         text("Key color", 13, MUTED);
         LinearLayout colors = new LinearLayout(this);
         colors.setOrientation(LinearLayout.HORIZONTAL);

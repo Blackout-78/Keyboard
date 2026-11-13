@@ -73,7 +73,8 @@ public class KeyboardView extends View {
 
     private Bitmap bg;
     private int keyColor = 0xFF000000;
-    private int keyAlpha = Cfg.DEFAULT_KEY_ALPHA;
+    private int letterAlpha = Cfg.DEFAULT_KEY_ALPHA;
+    private int otherAlpha = Cfg.DEFAULT_KEY_ALPHA;
     private int dim = Cfg.DEFAULT_DIM;
     private boolean hints = true;
     private final String stamp;
@@ -126,16 +127,37 @@ public class KeyboardView extends View {
         invalidate();
     }
 
-    /** Re-reads theme settings (image, colors, font). Called every time the keyboard opens. */
-    public void reloadTheme() {
+    private void readPrefs() {
         Context c = getContext();
-        keyAlpha = Cfg.keyAlpha(c);
+        letterAlpha = Cfg.letterAlpha(c);
+        otherAlpha = Cfg.otherAlpha(c);
         keyColor = Cfg.keyColor(c);
         dim = Cfg.dim(c);
         hints = Cfg.hints(c);
         fit = Cfg.fit(c);
         int tint = Cfg.tint(c);
         pBmp.setColorFilter(tint == 0 ? null : new PorterDuffColorFilter(tint, PorterDuff.Mode.MULTIPLY));
+    }
+
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener prefListener =
+            (sp, key) -> { readPrefs(); invalidate(); };
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        Cfg.p(getContext()).registerOnSharedPreferenceChangeListener(prefListener);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        Cfg.p(getContext()).unregisterOnSharedPreferenceChangeListener(prefListener);
+        super.onDetachedFromWindow();
+    }
+
+    /** Re-reads theme settings (image, colors, font). Called every time the keyboard opens. */
+    public void reloadTheme() {
+        readPrefs();
+        Context c = getContext();
         Typeface tf = Typeface.DEFAULT;
         File ff = Cfg.fontFile(c);
         if (ff.exists()) {
@@ -277,7 +299,8 @@ public class KeyboardView extends View {
             for (Key k : row) {
                 boolean down = isPressed(k);
                 int base = k.code == ENTER ? 0xFF7C6CF0 : keyColor;
-                int a = down ? Math.min(255, keyAlpha + 55) : keyAlpha;
+                int base0 = k.code == 0 ? letterAlpha : otherAlpha;
+                int a = down ? Math.min(255, base0 + 55) : base0;
                 pFill.setColor(down && k.code != ENTER ? 0xFF2A2A38 : base);
                 pFill.setAlpha(a);
                 c.drawRoundRect(k.r, rad, rad, pFill);

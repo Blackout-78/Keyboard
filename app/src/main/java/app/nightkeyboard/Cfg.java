@@ -22,7 +22,11 @@ final class Cfg {
 
     static File fontFile(Context c) { return new File(c.getFilesDir(), "font.ttf"); }
 
-    static int keyAlpha(Context c) { return p(c).getInt("keyAlpha", DEFAULT_KEY_ALPHA); }
+    /** Opacity of letter, number and symbol keys: 0 transparent to 255 solid. */
+    static int letterAlpha(Context c) { return p(c).getInt("letterAlpha", DEFAULT_KEY_ALPHA); }
+
+    /** Opacity of shift, backspace, ?123, Space and Enter keys. */
+    static int otherAlpha(Context c) { return p(c).getInt("otherAlpha", DEFAULT_KEY_ALPHA); }
 
     static int dim(Context c) { return p(c).getInt("dim", DEFAULT_DIM); }
 
@@ -46,7 +50,7 @@ final class Cfg {
         } catch (Exception e) {
             return false;
         }
-        p(c).edit().putInt("keyColor", 0xFF000000).putInt("keyAlpha", 170).putInt("dim", 0)
+        p(c).edit().putInt("keyColor", 0xFF000000).putInt("letterAlpha", 170).putInt("otherAlpha", 170).putInt("dim", 0)
                 .putInt("fit", 0).putInt("tint", 0xFF5C7CFA)
                 .putBoolean("themeInit", true).apply();
         return true;

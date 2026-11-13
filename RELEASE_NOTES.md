@@ -1,6 +1,4 @@
-Keyboard 0.1.1
+Keyboard 0.1.2
 
-Fixed: background image now stretches to fill the whole keyboard (whole skull visible), as in your reference.
-Added: image fit choice (stretch / crop / fit), image tint colors, Skull theme now defaults to the blue tint.
-To get the new default look: Settings, Apply Skull theme.
+Added: separate transparent-to-solid sliders for letter keys and for other keys (shift, delete, space, enter). Changes show live on the open keyboard.
 No internet permission. No data collected.

@@ -32,7 +32,7 @@ public class KeyboardView extends View {
     }
 
     static final int DEL = -2, SHIFT = -1, SYM = -3, ENTER = -4, SPACE = -5, ABC = -6, EMOJI = -7, NONE = -9;
-    static final int T_INC_L = 1, T_SELECT = 2, T_COPY = 3, T_PASTE = 4, T_CLIP = 5, T_MENU = 6, T_SETTINGS = 7, T_INC_R = 8;
+    static final int T_INC_L = 1, T_SELECT = 2, T_COPY = 3, T_PASTE = 4, T_CUT = 5, T_UNDO = 6, T_SETTINGS = 7, T_INC_R = 8, T_REDO = 9;
 
     private static final class Key {
         final String label;
@@ -49,7 +49,7 @@ public class KeyboardView extends View {
         }
     }
 
-    private static final int[] TOOLS = {T_INC_L, T_SELECT, T_COPY, T_PASTE, T_CLIP, T_MENU, T_SETTINGS, T_INC_R};
+    private static final int[] TOOLS = {T_INC_L, T_SELECT, T_COPY, T_PASTE, T_CUT, T_UNDO, T_SETTINGS, T_INC_R};
 
     private Listener listener;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -93,6 +93,17 @@ public class KeyboardView extends View {
                 longFired = true;
                 if (listener != null) listener.onText(longKey.hint);
                 invalidate();
+            }
+        }
+    };
+    private int toolLongId = -1;
+    private boolean toolLongFired;
+    private final Runnable toolLongRun = new Runnable() {
+        @Override public void run() {
+            Integer t = pressedTools.get(toolLongId);
+            if (t != null && t == T_UNDO && listener != null) {
+                toolLongFired = true;
+                listener.onAction(T_REDO);
             }
         }
     };
@@ -416,15 +427,16 @@ public class KeyboardView extends View {
                 c.drawRoundRect(cx - s * 0.8f, cy - s * 0.8f, cx + s * 0.8f, cy + s, dp * 2, dp * 2, pLine);
                 c.drawRect(cx - s * 0.4f, cy - s, cx + s * 0.4f, cy - s * 0.5f, pFill);
                 break;
-            case T_CLIP:
-                c.drawRoundRect(cx - s * 0.8f, cy - s * 0.8f, cx + s * 0.8f, cy + s, dp * 2, dp * 2, pLine);
-                c.drawLine(cx - s * 0.4f, cy - s * 0.2f, cx + s * 0.4f, cy - s * 0.2f, pLine);
-                c.drawLine(cx - s * 0.4f, cy + s * 0.3f, cx + s * 0.4f, cy + s * 0.3f, pLine);
+            case T_CUT:
+                c.drawCircle(cx - s * 0.6f, cy + s * 0.6f, s * 0.32f, pLine);
+                c.drawCircle(cx + s * 0.6f, cy + s * 0.6f, s * 0.32f, pLine);
+                c.drawLine(cx - s * 0.45f, cy + s * 0.3f, cx + s * 0.8f, cy - s, pLine);
+                c.drawLine(cx + s * 0.45f, cy + s * 0.3f, cx - s * 0.8f, cy - s, pLine);
                 break;
-            case T_MENU:
-                c.drawLine(cx - s, cy - s * 0.6f, cx + s, cy - s * 0.6f, pLine);
-                c.drawLine(cx - s * 0.6f, cy, cx + s, cy, pLine);
-                c.drawLine(cx - s, cy + s * 0.6f, cx + s * 0.5f, cy + s * 0.6f, pLine);
+            case T_UNDO:
+                c.drawArc(new RectF(cx - s * 0.9f, cy - s * 0.6f, cx + s * 0.9f, cy + s * 0.9f), 180, 200, false, pLine);
+                c.drawLine(cx - s * 0.9f, cy + s * 0.15f, cx - s * 1.3f, cy - s * 0.25f, pLine);
+                c.drawLine(cx - s * 0.9f, cy + s * 0.15f, cx - s * 0.5f, cy - s * 0.25f, pLine);
                 break;
             case T_SETTINGS:
                 c.drawCircle(cx, cy, s * 0.45f, pLine);
@@ -483,7 +495,15 @@ public class KeyboardView extends View {
     private void down(int id, float x, float y) {
         if (y < toolbarH()) {
             for (int i = 0; i < TOOLS.length; i++) {
-                if (toolRects[i].contains(x, y)) { pressedTools.put(id, TOOLS[i]); break; }
+                if (toolRects[i].contains(x, y)) {
+                    pressedTools.put(id, TOOLS[i]);
+                    if (TOOLS[i] == T_UNDO) {
+                        toolLongId = id;
+                        toolLongFired = false;
+                        handler.postDelayed(toolLongRun, 400);
+                    }
+                    break;
+                }
             }
             invalidate();
             return;
@@ -521,7 +541,11 @@ public class KeyboardView extends View {
         if (tool != null) {
             pressedTools.remove(id);
             if (tool == T_INC_L || tool == T_INC_R) incognito = !incognito;
-            else if (listener != null) listener.onAction(tool);
+            else if (tool == T_UNDO) {
+                handler.removeCallbacks(toolLongRun);
+                if (!toolLongFired && listener != null) listener.onAction(T_UNDO);
+                toolLongFired = false;
+            } else if (listener != null) listener.onAction(tool);
             invalidate();
             return;
         }
@@ -559,6 +583,7 @@ public class KeyboardView extends View {
     private void cancelAll() {
         spaceId = -1;
         handler.removeCallbacks(longRun);
+        handler.removeCallbacks(toolLongRun);
         handler.removeCallbacks(repeatRun);
         repeatKey = null;
         longKey = null;

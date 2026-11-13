@@ -1,4 +1,4 @@
-Keyboard 0.1.4
+Keyboard 0.1.5
 
-Added: slide a finger left or right along the Space bar to move the cursor. A plain tap still types a space. Can be turned off in Settings.
+Added: Cut key and Undo key on the toolbar (tap Undo, hold Undo for Redo). No clipboard history: nothing is stored.
 No internet permission. No data collected.

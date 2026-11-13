@@ -74,6 +74,15 @@ public class KeyboardService extends InputMethodService implements KeyboardView.
             case KeyboardView.T_COPY:
                 if (ic != null) ic.performContextMenuAction(android.R.id.copy);
                 break;
+            case KeyboardView.T_CUT:
+                if (ic != null) ic.performContextMenuAction(android.R.id.cut);
+                break;
+            case KeyboardView.T_UNDO:
+                if (ic != null) ic.performContextMenuAction(android.R.id.undo);
+                break;
+            case KeyboardView.T_REDO:
+                if (ic != null) ic.performContextMenuAction(android.R.id.redo);
+                break;
             case KeyboardView.T_PASTE:
                 if (ic != null) ic.performContextMenuAction(android.R.id.paste);
                 break;

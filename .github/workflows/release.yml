@@ -1,7 +1,7 @@
 name: Release
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
@@ -31,4 +31,9 @@ jobs:
         run: |
           VER=$(grep -oP "versionName '\K[^']+" app/build.gradle)
           cp app/build/outputs/apk/release/app-release.apk "Keyboard-v$VER.apk"
-          gh release create "v$VER" "Keyboard-v$VER.apk" --title "Keyboard v$VER" --notes-file RELEASE_NOTES.md
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            gh release upload "v$VER" "Keyboard-v$VER.apk" --clobber
+            gh release edit "v$VER" --notes-file RELEASE_NOTES.md
+          else
+            gh release create "v$VER" "Keyboard-v$VER.apk" --target "$GITHUB_SHA" --title "Keyboard v$VER" --notes-file RELEASE_NOTES.md
+          fi

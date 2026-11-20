@@ -13,6 +13,9 @@ final class Cfg {
     static final int DEFAULT_DIM = 90;
     static final int DEFAULT_ACCENT = 0xFF23295D;
 
+    static final int DEFAULT_CURSOR = 3;
+    static final String[] CURSOR_NAMES = {"Thin line", "Rounded bar", "Block", "Underline", "White line", "Gold line"};
+
     private Cfg() {}
 
     static SharedPreferences p(Context c) {
@@ -61,6 +64,9 @@ final class Cfg {
 
     /** Color of the small hint symbols. */
     static int hintColor(Context c) { return p(c).getInt("hintColor", 0xFF9A9AB0); }
+
+    /** Text cursor look in the emoji search box. Default: underline. */
+    static int cursorStyle(Context c) { return p(c).getInt("cursorStyle", DEFAULT_CURSOR); }
 
     static boolean skullFaces(Context c) { return p(c).getBoolean("skullFaces", true); }
 

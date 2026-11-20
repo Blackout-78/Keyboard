@@ -348,6 +348,7 @@ public class KeyboardView extends View {
         hintColor = Cfg.hintColor(c);
         pText.setColor(textColor);
         pHint.setColor(hintColor);
+        emoji.setCursorStyle(Cfg.cursorStyle(c));
         emoji.setTheme(textColor, accent, hintColor, keyColor, otherAlpha, Cfg.skullFaces(c));
         int tint = Cfg.tint(c);
         pBmp.setColorFilter(tint == 0 ? null : new PorterDuffColorFilter(tint, PorterDuff.Mode.MULTIPLY));

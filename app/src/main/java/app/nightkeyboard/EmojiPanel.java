@@ -44,6 +44,22 @@ final class EmojiPanel {
     private final Paint pF = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int textColor = 0xFFFFFFFF, accent = 0xFF7C6CF0, hintColor = 0xFF9A9AB0, keyColor = 0xFF000000, keyAlpha = 200;
     private boolean skull = true;
+    private int cursorStyle = Cfg.DEFAULT_CURSOR;
+    private boolean blinkOn = true;
+    private final Runnable blinker = new Runnable() {
+        @Override public void run() {
+            if (!active || !searching) { blinkOn = true; return; }
+            blinkOn = !blinkOn;
+            out.redraw();
+            handler.postDelayed(this, 500);
+        }
+    };
+
+    private void startBlink() {
+        handler.removeCallbacks(blinker);
+        blinkOn = true;
+        handler.postDelayed(blinker, 500);
+    }
 
     boolean active;
     boolean searching;
@@ -73,6 +89,8 @@ final class EmojiPanel {
         pL.setStrokeJoin(Paint.Join.ROUND);
         pL.setStrokeWidth(dp * 1.6f);
     }
+
+    void setCursorStyle(int style) { cursorStyle = style; }
 
     void setTheme(int text, int acc, int hint, int key, int kAlpha, boolean skullOn) {
         textColor = text;
@@ -216,15 +234,34 @@ final class EmojiPanel {
             c.drawText(query, x, base, pT);
             x += pT.measureText(query) + dp * 2;
         }
-        if (searching) {
-            pL.setColor(accent);
-            c.drawLine(x, cy - dp * 9, x, cy + dp * 9, pL);
-        }
+        if (searching && blinkOn) drawCursor(c, x, cy, base);
         pL.setColor(hintColor);
         float xc = p.right - dp * 22;
         c.drawLine(xc - dp * 5, cy - dp * 5, xc + dp * 5, cy + dp * 5, pL);
         c.drawLine(xc - dp * 5, cy + dp * 5, xc + dp * 5, cy - dp * 5, pL);
         pT.setTextAlign(Paint.Align.CENTER);
+    }
+
+    /** Cursor styles: 0 thin line, 1 rounded bar, 2 block, 3 underline, 4 white line, 5 gold line. */
+    private void drawCursor(Canvas c, float x, float cy, float base) {
+        int color = cursorStyle == 4 ? 0xFFFFFFFF : (cursorStyle == 5 ? 0xFFD4A84B : accent);
+        pF.setColor(color);
+        pF.setAlpha(255);
+        pL.setColor(color);
+        switch (cursorStyle) {
+            case 1:
+                c.drawRoundRect(new RectF(x, cy - dp * 9, x + dp * 3, cy + dp * 9), dp * 1.5f, dp * 1.5f, pF);
+                break;
+            case 2:
+                pF.setAlpha(217);
+                c.drawRect(x, cy - dp * 9, x + dp * 10, cy + dp * 9, pF);
+                break;
+            case 3:
+                c.drawRoundRect(new RectF(x, base + dp * 1.5f, x + dp * 10, base + dp * 3.5f), dp, dp, pF);
+                break;
+            default:
+                c.drawLine(x, cy - dp * 9, x, cy + dp * 9, pL);
+        }
     }
 
     private void geom(float w, float top, float rowH, int rows) {
@@ -433,7 +470,7 @@ final class EmojiPanel {
             }
             popIdx = -1;
         } else if (region == R_STRIP) {
-            if (x > lastW - dp * 52) close(); else searching = true;
+            if (x > lastW - dp * 52) close(); else { searching = true; startBlink(); }
         } else if (region == R_GRID) {
             int idx = idxAt(x, y);
             if (idx >= 0) out.insert(ch[idx]);

@@ -1,6 +1,5 @@
-Keyboard 0.5.0
+Keyboard 0.5.1
 
-Added: emoji picker with search. Tap the smiley key. Browse by category, drag to scroll, or tap the search box and type (for example "heart"). Long-press hands and people to pick a skin tone.
-Added: skull faces. In the picker, face emoji are drawn as skull expressions (drawn by the app). Tapping one types the normal matching emoji. Switch it off in Settings, Typing, Skull faces.
-Emoji data is bundled (Emojibase 18, Unicode emoji 18, MIT). Emoji your phone cannot draw are hidden so you never see blank boxes. No recently-used list, no history.
+Added: 6 text cursor styles for the emoji search box: Thin line, Rounded bar, Block, Underline, White line, Gold line. Pick one in Settings, Typing, Text cursor.
+Changed: the cursor now blinks. Default is Underline.
 Still private: no internet permission, nothing stored or sent.

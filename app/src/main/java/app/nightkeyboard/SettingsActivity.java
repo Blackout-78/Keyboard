@@ -176,6 +176,11 @@ public class SettingsActivity extends Activity {
         toggle(c, "Slide on Space bar to move cursor", "spaceSwipe", true);
         toggle(c, "Hint symbols on keys (hold a key to type its hint)", "hints", true);
         toggle(c, "Skull faces in the emoji picker (types the normal emoji)", "skullFaces", true);
+        final Button cb = button(c, cursorLabel(), null);
+        cb.setOnClickListener(v -> {
+            Cfg.p(this).edit().putInt("cursorStyle", (Cfg.cursorStyle(this) + 1) % Cfg.CURSOR_NAMES.length).apply();
+            cb.setText(cursorLabel());
+        });
         label(c, "Suggestions and autocorrect: coming next.", 13, MUTED);
 
         c = card("VOICE (OFFLINE)");
@@ -221,6 +226,10 @@ public class SettingsActivity extends Activity {
     }
 
     // ---- helpers ----
+
+    private String cursorLabel() {
+        return "Text cursor: " + Cfg.CURSOR_NAMES[Cfg.cursorStyle(this)] + " (tap to change)";
+    }
 
     private String fitLabel() {
         int f = Cfg.fit(this);

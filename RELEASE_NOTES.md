@@ -1,5 +1,4 @@
-Keyboard 0.5.1
+Keyboard 0.5.2
 
-Added: 6 text cursor styles for the emoji search box: Thin line, Rounded bar, Block, Underline, White line, Gold line. Pick one in Settings, Typing, Text cursor.
-Changed: the cursor now blinks. Default is Underline.
+Changed: the Underline text cursor is now white (the default cursor). The other cursor styles are unchanged.
 Still private: no internet permission, nothing stored or sent.

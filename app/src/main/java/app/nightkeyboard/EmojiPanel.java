@@ -244,7 +244,7 @@ final class EmojiPanel {
 
     /** Cursor styles: 0 thin line, 1 rounded bar, 2 block, 3 underline, 4 white line, 5 gold line. */
     private void drawCursor(Canvas c, float x, float cy, float base) {
-        int color = cursorStyle == 4 ? 0xFFFFFFFF : (cursorStyle == 5 ? 0xFFD4A84B : accent);
+        int color = (cursorStyle == 3 || cursorStyle == 4) ? 0xFFFFFFFF : (cursorStyle == 5 ? 0xFFD4A84B : accent);
         pF.setColor(color);
         pF.setAlpha(255);
         pL.setColor(color);

@@ -1,4 +1,4 @@
-Keyboard 0.5.2
+Keyboard 0.5.3
 
-Changed: the Underline text cursor is now white (the default cursor). The other cursor styles are unchanged.
+Fixed: the text cursor in the Settings test box is now white, so you can see it on the dark theme.
 Still private: no internet permission, nothing stored or sent.

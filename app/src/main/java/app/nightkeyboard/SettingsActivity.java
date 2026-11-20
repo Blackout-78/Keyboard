@@ -170,6 +170,12 @@ public class SettingsActivity extends Activity {
         test.setHint("Type here to test");
         test.setHintTextColor(MUTED);
         test.setTextColor(Color.WHITE);
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            GradientDrawable cur = new GradientDrawable();
+            cur.setColor(Color.WHITE);
+            cur.setSize(dp(2), dp(22));
+            test.setTextCursorDrawable(cur);
+        }
         c.addView(test);
 
         c = card("TYPING");

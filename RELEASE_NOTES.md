@@ -1,4 +1,5 @@
-Keyboard 0.5.3
+Keyboard 0.5.4
 
-Fixed: the text cursor in the Settings test box is now white, so you can see it on the dark theme.
+Fixed: voice model files are now checked (must be a real whisper model) before they are loaded.
+Fixed: the app can never gain internet permission from a library; the release build is also locked down tighter.
 Still private: no internet permission, nothing stored or sent.

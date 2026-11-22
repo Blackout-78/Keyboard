@@ -4,3 +4,13 @@ local.properties
 *.jks
 *.keystore
 app/src/main/cpp/whisper.cpp/
+__pycache__/
+*.pyc
+*.p12
+*.pfx
+*.pem
+*.key
+.env
+KEYSTORE_*.txt
+github-secrets*.txt
+keystore.properties

@@ -450,6 +450,18 @@ public class SettingsActivity extends Activity {
                     } catch (Exception e) {
                         ok = false;
                     }
+                    // whisper.cpp GGML_FILE_MAGIC 0x67676d6c, stored little-endian: 6c 6d 67 67
+                    if (ok) {
+                        byte[] hdr = new byte[4];
+                        try (InputStream hin = new java.io.FileInputStream(f)) {
+                            int got = 0, r;
+                            while (got < 4 && (r = hin.read(hdr, got, 4 - got)) > 0) got += r;
+                            ok = got == 4 && hdr[0] == 0x6c && hdr[1] == 0x6d
+                                    && hdr[2] == 0x67 && hdr[3] == 0x67;
+                        } catch (Exception e) {
+                            ok = false;
+                        }
+                    }
                     final boolean good = ok && f.length() > 1000000;
                     if (!good) f.delete();
                     runOnUiThread(new Runnable() {
